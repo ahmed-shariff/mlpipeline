@@ -6,17 +6,41 @@ import itertools
 from itertools import product
 import global_values as cnn
 
+class version_parameters():
+  self.NAME = "name"
+  self.BATCH_SIZE = "batch_size"
+  self.EPOC_COUNT = "epoc_count"
+  self.LEARNING_RATE = "learning_rate"
+  self.MODEL_DIR_SUFFIX = "model_dir_suffix"
+  self.HOOKS = "hooks"
+  self.CLASSES_COUNT = "classes_count"
+  self.CLASSES_OFFSET = "classes_offset"
+  self.USE_ALL_CLASSES = "use_all_classes"
+  
 class VersionContainer():
+  '''
+class containing the paramter version details.
+'''
   def __init__(self,
                name,
-               use_all_classes,
-               classes_count,
                batch_size,
                epoc_count,
-               classes_offset,
                learning_rate,
                model_dir_suffix,
-               hooks):
+               hooks,
+               classes_count,
+               use_all_classes,
+               classes_offset):
+    self.parameters = {}
+    self.parameters[version_parameters.NAME]
+    self.parameters[version_parameters.BATCH_SIZE]
+    self.parameters[version_parameters.EPOC_COUNT]
+    self.parameters[version_parameters.LEARNING_RATE]
+    self.parameters[version_parameters.MODEL_DIR_SUFFIX]
+    self.parameters[version_parameters.HOOKS]
+    self.parameters[version_parameters.CLASSES_COUNT]
+    self.parameters[version_parameters.USE_ALL_CLASSES]
+    self.parameters[version_parameters.CLASSES_OFFSET]
     self.name = name
     self.use_all_classes = use_all_classes
     self.classes_count = classes_count
@@ -28,6 +52,10 @@ class VersionContainer():
     self.hooks=hooks
 
 class Version():
+  '''
+The class that holds the paramter versions. Every model needs to have the variable 'VERSIONS' set, with an instance of this class.
+Also prvodes helper functions to define and add new parameter versions.
+'''
   versions = []
   def __init__(self,
                learning_rate,
@@ -126,7 +154,9 @@ class Version():
                        learning_rate = [],
                        model_dir_suffix = [],
                        hooks = []):
-
+    '''
+Allows to difine parameter versions where a range of values for a paramter is provided. A list of names with length not less than number of the possible combinations of the paramters given shoul be provided. 
+'''
     count=itertools.count(0,1)
     getVal = lambda var, dval: (next(count), var) if len(var) is not 0 else (None, dval)
     productWrapper = lambda args: product(*args)
@@ -154,6 +184,7 @@ class Version():
                 indexes["g"][1] if indexes["g"][0] is None else params[indexes["g"][0]],
                 indexes["h"][1] if indexes["h"][0] is None else params[indexes["h"][0]],
                 indexes["i"][1] if indexes["i"][0] is None else params[indexes["i"][0]])
+
   def getVersion(self, version_name):
     for v in self.versions:
       if v.name == version_name:

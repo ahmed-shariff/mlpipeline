@@ -127,7 +127,7 @@ def _main():
       restart_global_step = RESTART_GLOBAL_STEP
     if version_name is None:
       try:
-        use_all_classes =  current_model.USE_ALL_CLASSES
+        use_all_classes = current_model.USE_ALL_CLASSES
       except:
         use_all_classes = USE_ALL_CLASSES
       try:
@@ -156,7 +156,7 @@ def _main():
         verion_hooks = VERSION_HOOKS
     else:
       version_spec = current_model.VERSIONS.getVersion(version_name)
-      use_all_classes = version_spec.use_all_classes
+      
       classes_count = version_spec.classes_count
       batch_size = version_spec.batch_size
       epoc_count = version_spec.epoc_count
