@@ -4,192 +4,188 @@ import string
 import random
 import itertools
 from itertools import product
-import global_values as cnn
+import global_values as G
 
 class version_parameters():
-  self.NAME = "name"
-  self.BATCH_SIZE = "batch_size"
-  self.EPOC_COUNT = "epoc_count"
-  self.LEARNING_RATE = "learning_rate"
-  self.MODEL_DIR_SUFFIX = "model_dir_suffix"
-  self.HOOKS = "hooks"
-  self.CLASSES_COUNT = "classes_count"
-  self.CLASSES_OFFSET = "classes_offset"
-  self.USE_ALL_CLASSES = "use_all_classes"
-  
-class VersionContainer():
   '''
-class containing the paramter version details.
+Enum class that defines eums for some of the parameters used in versions
 '''
-  def __init__(self,
-               name,
-               batch_size,
-               epoc_count,
-               learning_rate,
-               model_dir_suffix,
-               hooks,
-               classes_count,
-               use_all_classes,
-               classes_offset):
-    self.parameters = {}
-    self.parameters[version_parameters.NAME]
-    self.parameters[version_parameters.BATCH_SIZE]
-    self.parameters[version_parameters.EPOC_COUNT]
-    self.parameters[version_parameters.LEARNING_RATE]
-    self.parameters[version_parameters.MODEL_DIR_SUFFIX]
-    self.parameters[version_parameters.HOOKS]
-    self.parameters[version_parameters.CLASSES_COUNT]
-    self.parameters[version_parameters.USE_ALL_CLASSES]
-    self.parameters[version_parameters.CLASSES_OFFSET]
-    self.name = name
-    self.use_all_classes = use_all_classes
-    self.classes_count = classes_count
-    self.batch_size = batch_size
-    self.epoc_count = epoc_count
-    self.classes_offset = classes_offset
-    self.learning_rate = learning_rate
-    self.model_dir_suffix=model_dir_suffix
-    self.hooks=hooks
-
+  NAME = "name"
+  DATALOADER = "dataloader"
+  BATCH_SIZE = "batch_size"
+  EPOC_COUNT = "epoc_count"
+  LEARNING_RATE = "learning_rate"
+  MODEL_DIR_SUFFIX = "model_dir_suffix"
+  HOOKS = "hooks"
+  #the rest are not needed for model is general, just mine 
+  CLASSES_COUNT = "classes_count"
+  CLASSES_OFFSET = "classes_offset"
+  USE_ALL_CLASSES = "use_all_classes"
+  
 class Version():
   '''
 The class that holds the paramter versions. Every model needs to have the variable 'VERSIONS' set, with an instance of this class.
 Also prvodes helper functions to define and add new parameter versions.
 '''
-  versions = []
+  versions = {}
+  versions_defaults = {}
   def __init__(self,
                learning_rate,
-               use_all_classes = None,
-               classes_count = None,
+               dataloader,
                batch_size = None,
                epoc_count = None,
-               classes_offset = None,
                model_dir_suffix = None,
-               hooks = None
+               hooks = None,
+               #
+               use_all_classes = None,
+               classes_count = None,
+               classes_offset = None
                ):
-    self.versions = []
-    self.learning_rate = learning_rate
-    if use_all_classes is None:
-      self.use_all_classes = cnn.USE_ALL_CLASSES
-    else:
-      self.use_all_classes = use_all_classes
-
-    if classes_count is None:
-      self.classes_count = cnn.CLASSES_COUNT
-    else:
-      self.classes_count = classes_count
+    self.versions = {}
+    self.versions_defaults[version_parameters.LEARNING_RATE] = learning_rate
+    self.versions_defaults[version_parameters.DATALOADER] = dataloader
 
     if batch_size is None:
-      self.batch_size = cnn.BATCH_SIZE
+      self.versions_defaults[version_parameters.BATCH_SIZE] = G.BATCH_SIZE
     else:
-      self.batch_size = batch_size
+      self.versions_defaults[version_parameters.BATCH_SIZE] = batch_size
       
     if epoc_count is None:
-      self.epoc_count = cnn.EPOC_COUNT
+      self.versions_defaults[version_parameters.EPOC_COUNT] = G.EPOC_COUNT
     else:
-      self.epoc_count = epoc_count
-
-    if classes_offset is None:
-      self.classes_offset = cnn.CLASSES_OFFSET
-    else:
-      self.classes_offset = classes_offset
+      self.versions_defaults[version_parameters.EPOC_COUNT] = epoc_count
 
     if model_dir_suffix is None:
-      self.model_dir_suffix = cnn.MODEL_DIR_SUFFIX
+      self.versions_defaults[version_parameters.MODEL_DIR_SUFFIX] = G.MODEL_DIR_SUFFIX
     else:
-      self.classes_offset = model_dir_suffix
+      self.versions_defaults[version_parameters.MODEL_DIR_SUFFIX] = model_dir_suffix
 
     if hooks is None:
-      self.hooks = cnn.VERSION_HOOKS
+      self.versions_defaults[version_parameters.HOOKS] = G.HOOKS
     else:
-      self.hooks = hooks
+      self.versions_defaults[version_parameters.HOOKS] = hooks
 
+    #
+    if use_all_classes is None:
+      self.versions_defaults[version_parameters.USE_ALL_CLASSES] = G.USE_ALL_CLASSES
+    else:
+      self.versions_defaults[version_parameters.USE_ALL_CLASSES] = use_all_classes
+
+    if classes_offset is None:
+      self.versions_defaults[version_parameters.CLASSES_OFFSET] = G.CLASSES_OFFSET
+    else:
+      self.versions_defaults[version_parameters.CLASSES_OFFSET] = classes_offset
+
+    if classes_count is None:
+      self.versions_defaults[version_parameters.CLASSES_COUNT] = G.CLASSES_COUNT
+    else:
+      self.versions_defaults[version_parameters.CLASSES_COUNT] = classes_count
 
   def addV(self,
            name,
-           use_all_classes = None,
-           classes_count = None,
+           dataloader = None,
            batch_size = None,
            epoc_count = None,
-           classes_offset = None,
            learning_rate = None,
            model_dir_suffix = None,
-           hooks = None):
+           hooks = None,
+           custom_paramters={},
+           #
+           use_all_classes = None,
+           classes_count = None,
+           classes_offset = None):
 
-    if use_all_classes is None:
-      use_all_classes = self.use_all_classes
-    if classes_count is None:
-      classes_count = self.classes_count
+    if dataloader is None:
+      dataloader = self.versions_defaults[version_parameters.DATALOADER]
     if batch_size is None:
-      batch_size = self.batch_size
+      batch_size = self.versions_defaults[version_parameters.BATCH_SIZE]
     if epoc_count is None:
-      epoc_count = self.epoc_count
-    if classes_offset is None:
-      classes_offset = self.classes_offset
+      epoc_count = self.versions_defaults[version_parameters.EPOC_COUNT]
     if learning_rate is None:
-      learning_rate = self.learning_rate
+      learning_rate = self.versions_defaults[version_parameters.LEARNING_RATE]
     if model_dir_suffix is None:
-      model_dir_suffix = self.model_dir_suffix
+      model_dir_suffix = self.versions_defaults[version_parameters.MODEL_DIR_SUFFIX]
     if hooks is None:
-      hooks = self.hooks
+      hooks = self.versions_defaults[version_parameters.HOOKS]
+    #
+    if use_all_classes is None:
+      use_all_classes = self.versions_defaults[version_parameters.USE_ALL_CLASSES]
+    if classes_count is None:
+      classes_count = self.versions_defaults[version_parameters.CLASSES_COUNT]
+    if classes_offset is None:
+      classes_offset = self.versions_defaults[version_parameters.CLASSES_OFFSET]
+
+    self.versions[name] = {}
+    self.versions[name][version_parameters.NAME] = name
+    self.versions[name][version_parameters.DATALOADER] = dataloader
+    self.versions[name][version_parameters.BATCH_SIZE] = batch_size
+    self.versions[name][version_parameters.EPOC_COUNT] = epoc_count
+    self.versions[name][version_parameters.LEARNING_RATE] = learning_rate
+    self.versions[name][version_parameters.MODEL_DIR_SUFFIX] = model_dir_suffix
+    self.versions[name][version_parameters.HOOKS] = hooks
+    self.versions[name][version_parameters.USE_ALL_CLASSES] = use_all_classes
+    self.versions[name][version_parameters.CLASSES_COUNT] = classes_count
+    self.versions[name][version_parameters.CLASSES_OFFSET] = classes_offset
+
+    for k,v in custom_paramters.items():
+      self.versions[name][k] = v
       
-    self.versions.append(VersionContainer(name=name,
-                                          use_all_classes=use_all_classes,
-                                          classes_count=classes_count,
-                                          batch_size=batch_size,
-                                          epoc_count=epoc_count,
-                                          classes_offset=classes_offset,
-                                          learning_rate=learning_rate,
-                                          model_dir_suffix=model_dir_suffix,
-                                          hooks=hooks))
-                         
-                         
-  def rangeOnParameter(self,
-                       names,
-                       use_all_classes = [],
-                       classes_count= [],
-                       batch_size= [],
-                       epoc_count = [],
-                       classes_offset = [],
-                       learning_rate = [],
-                       model_dir_suffix = [],
-                       hooks = []):
+  def rangeOnParameters(self,
+                        names=None,
+                        combining_parameters = [],
+                        parameters = {}):
     '''
-Allows to difine parameter versions where a range of values for a paramter is provided. A list of names with length not less than number of the possible combinations of the paramters given shoul be provided. 
+Allows to deifine versions by providing a range(i.e. list) of values. The names of the paramters for which range is provided should be procided by combination_parmters. The values should be provided through the paramteres dictionary. The dictionaries keys are the same as that used for the versions as well as the combining_parameters parameter. Combinations of the values of the paramters specified in combining_parameters taken from the paramters dict will be used to generate versions. Parameters in the parameters dict which are not given in combining_paramters, will be used for all the combinations produced. Prameters not specified in paramteres dict will use the default values defined.
+
+Example:
+rangeOnParameters(combining_paramters = [version_parameters.LEARNING_RATE, 'model_specific_param1'],
+                  paramters = {version_parameters.LEARNING_RATE = [0.005, 0.001], 
+                               'model_specific_param1' = [1,2],
+                               version_parameters.BATCH_SIZE = 100,
+                               'model_specific_param2' = 0.1}
+The combinations by the above call would be:
+    {version_parameters.LEARNING_RATE = 0.005, 
+     'model_specific_param1' = 1,
+     version_parameters.BATCH_SIZE = 100,
+     'model_specific_param2' = 0.1},
+    {version_parameters.LEARNING_RATE = 0.005, 
+     'model_specific_param1' = 2,
+     version_parameters.BATCH_SIZE = 100,
+     'model_specific_param2' = 0.1},
+    {version_parameters.LEARNING_RATE = 0.001, 
+     'model_specific_param1' = 1,
+     version_parameters.BATCH_SIZE = 100,
+     'model_specific_param2' = 0.1},
+    {version_parameters.LEARNING_RATE = 0.001, 
+     'model_specific_param1' = 2,
+     version_parameters.BATCH_SIZE = 100,
+     'model_specific_param2' = 0.1}
 '''
-    count=itertools.count(0,1)
-    getVal = lambda var, dval: (next(count), var) if len(var) is not 0 else (None, dval)
-    productWrapper = lambda args: product(*args)
-    indexes={"b": getVal(use_all_classes, self.use_all_classes),
-             "c": getVal(classes_count, self.classes_count),
-             "d": getVal(batch_size, self.batch_size),
-             "e": getVal(epoc_count, self.epoc_count),
-             "f": getVal(classes_offset, self.classes_count),
-             "g": getVal(learning_rate, self.learning_rate),
-             "h": getVal(model_dir_suffix, self.model_dir_suffix),
-             "i": getVal(hooks, self.hooks)
-            }
-    args = []
-    args = [v[1] for k,v in indexes.items() if v[0] is not None]
-    if len(names) != len(args):
-      raise ValueError("lenght of names shoul be {0}, to match the number of products generated".format(len(args)))
-    count=itertools.count(0,1)
-    for params in productWrapper(args):
-      self.addV(names[next(count)],
-                indexes["b"][1] if indexes["b"][0] is None else params[indexes["b"][0]],
-                indexes["c"][1] if indexes["c"][0] is None else params[indexes["c"][0]],
-                indexes["d"][1] if indexes["d"][0] is None else params[indexes["d"][0]],
-                indexes["e"][1] if indexes["e"][0] is None else params[indexes["e"][0]],
-                indexes["f"][1] if indexes["f"][0] is None else params[indexes["f"][0]],
-                indexes["g"][1] if indexes["g"][0] is None else params[indexes["g"][0]],
-                indexes["h"][1] if indexes["h"][0] is None else params[indexes["h"][0]],
-                indexes["i"][1] if indexes["i"][0] is None else params[indexes["i"][0]])
+    for key in combining_parameters:
+      if not isinstance(parameters[key], list):
+        parameters[key] = [parameters[key]]
+
+    products = [parameters[parameter] if isinstance(parameters[parameter], list) else [parameters[parameter]] for paramter in combining_parameters]
+    if names is None:
+      names = [genName() for _ in products]
+    elif len(products) != len(names):
+      raise ValueError("length of names shoul be {0}, to match the number of products generated".format(len(products)))
+    for idx, combination in enumerate(product(*products)):
+      self.addV(names[idx])
+      parameters_temp = parameters.copy()
+      for idx, parameter in combining_parameters:
+        parameters_temp[parameter] = combination[idx]
+      version = self.getVersion(names[idx])
+      for k,v in parameters_temp.items():
+        version.parameters[k] = v
 
   def getVersion(self, version_name):
-    for v in self.versions:
-      if v.name == version_name:
-        return v
-    raise ValueError("Version name '{0}' not found".format(version_name))
+    #for v in self.versions:
+    #  if v.name == version_name:
+    try:
+      return self.versions[version_name]
+    except KeyError:
+      raise ValueError("Version name '{0}' not found".format(version_name))
 
 class VersionLog():
   #list of version names
@@ -230,6 +226,8 @@ class VersionLog():
     self.exectued_versions=[]
     self.executing_version=None
     self.executing_v_time=0.0
-  
+    
 def genName():
   return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5))
+
+

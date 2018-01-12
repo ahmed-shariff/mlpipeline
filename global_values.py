@@ -17,6 +17,7 @@ LOG_FILE = MODELS_DIR + "/log"
 NO_LOG = False
 DATA_CODE_MAPPING = {}
 EXECUTED_MODELS = {}
+
 #if use_blacklist is true, LISTED_MODELS is blacklisted files
 #else LISTED_MODELS is whitelisted models
 USE_BLACKLIST=True
@@ -29,7 +30,6 @@ mtime='mtime'
 version='version'
 train_time="train_time"
 vless="vless"
-
 BATCH_SIZE = 15
 USE_ALL_CLASSES = False
 CLASSES_COUNT = 25
