@@ -10,6 +10,7 @@ import configparser
 import logging
 import socket
 import string
+import argparse
 from datetime import datetime
 
 from utils import VersionLog
@@ -43,8 +44,9 @@ from global_values import ALLOW_DELETE_MODEL_DIR
 from global_values import RESTART_GLOBAL_STEP
 from global_values import MODEL_DIR_SUFFIX
 
-tf.logging.set_verbosity(tf.logging.INFO)
-
+#tf.logging.set_verbosity(tf.logging.INFO)
+logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().name = "\033[1;32mML-pipline: \033[0m"
 def _main():
   # sys.path.append(os.getcwd())
   print(list((k, m[version].exectued_versions)  for k,m in EXECUTED_MODELS.items()))
@@ -146,7 +148,8 @@ def _main():
     eval_complete=False
     training_done = False
     while not classifier_executed:
-      tf.logging.set_verbosity(tf.logging.INFO)
+      #tf.logging.set_verbosity(tf.logging.INFO)
+      logging.getLogger().setLevel(logging.INFO)
       try:
         if clean_model_dir and allow_delete_model_dir:
           shutil.rmtree(model_dir, ignore_errors=True)
@@ -199,27 +202,33 @@ def _main():
         # Evaluate the model and print results
         try:
           log("Training evaluation started: {0} steps".format(train_eval_steps), log_tf=True)
-          tf.logging.set_verbosity(tf.logging.ERROR)
+          logging.getLogger().setLevel(logging.ERROR)
+          #tf.logging.set_verbosity(tf.logging.ERROR)
           train_results = classifier.evaluate(input_fn = dataLoader.get_train_input_fn(tf.estimator.ModeKeys.EVAL),# dataLoader.get_test_input_fn(),
                                               steps = train_eval_steps)
         except tf.errors.InvalidArgumentError:
-          tf.logging.set_verbosity(tf.logging.INFO)
+          #tf.logging.set_verbosity(tf.logging.INFO)
+          logging.getLogger().setLevel(logging.INFO)
           raise
         except Exception as e:
-          tf.logging.set_verbosity(tf.logging.INFO)
+          #tf.logging.set_verbosity(tf.logging.INFO)
+          logging.getLogger().setLevel(logging.INFO)
           train_results = "Training evaluation failed: {0}".format(str(e))
           log(train_results)
         
         try:
           log("Testing evaluation started: {0} steps".format(evaluation_steps), log_tf=True)
-          tf.logging.set_verbosity(tf.logging.ERROR)
+          #tf.logging.set_verbosity(tf.logging.ERROR)
+          logging.getLogger().setLevel(logging.ERROR)
           eval_results = classifier.evaluate(input_fn = dataLoader.get_test_input_fn(),
                                              steps = evaluation_steps)
         except tf.errors.InvalidArgumentError:
-          tf.logging.set_verbosity(tf.logging.INFO)
+          #tf.logging.set_verbosity(tf.logging.INFO)
+          logging.getLogger().setLevel(logging.INFO)
           raise
         except Exception as e:
-          tf.logging.set_verbosity(tf.logging.INFO)
+          #tf.logging.set_verbosity(tf.logging.INFO)
+          logging.getLogger().setLevel(logging.INFO)
           eval_results = "Test evaluation failed: {0}".format(str(e))
           log(eval_results)
 
@@ -365,6 +374,7 @@ def getNextModel(just_return_model=False):
   return None, None, False
 
 def save_training_time(model, version_):
+  global EXECUTED_MODELS
   if TEST_MODE:
     return
   name = model.__name__
@@ -379,6 +389,7 @@ def save_training_time(model, version_):
 
     
 def save_results_to_file(model, result, train_result, dataloader, training_done, model_dir):
+  global EXECUTED_MODELS
   modified_dt = datetime.isoformat(datetime.fromtimestamp(EXECUTED_MODELS[model.__name__][mtime]))
   result_dt = datetime.now().isoformat()
   with open(OUTPUT_FILE, 'a', encoding = "utf-8") as outfile:
@@ -412,14 +423,15 @@ def save_results_to_file(model, result, train_result, dataloader, training_done,
                                              .executing_version))
   EXECUTED_MODELS[model.__name__][version].moveExecutingToExecuted()
 
-def log(message, level = logging.INFO, log_tf=False):
+def log(message, level = logging.INFO, log_console=False):
   if level is not logging.INFO and level is not logging.ERROR:
     raise AttributeError("level cannot be other than logging.INFO or logging.ERROR, coz i am lazy to get others in here")
-  if log_tf:
-    tf.logging.log(level, message)
+  
   if TEST_MODE or NO_LOG:
     print(message)
   else:
+    if log_console:
+      logging.log(level, message)
     with open(LOG_FILE, 'a', encoding="utf-8") as log_file:
       level = ["INFO" if level is logging.INFO else "ERROR"]
       time = datetime.now().isoformat()
@@ -429,8 +441,8 @@ def config_update():
   config = configparser.ConfigParser(allow_no_value=True)
   config_file = config.read("cnn.config")
   global MODELS_DIR
-  global DATA_FILE_LOCATION
-  global TEST_FILE_LOCATION
+  #global DATA_FILE_LOCATION
+  #global TEST_FILE_LOCATION
   global EPOC_COUNT
   global USE_BLACKLIST
   global LISTED_MODELS
@@ -478,65 +490,71 @@ def config_update():
   open(LOG_FILE, "a").close()
 
       
-def main(unused_argv):
+def main():
+  parser = argparse.ArgumentParser(description= "Machine Learning Pipline")
+  parser.add_argument('-r', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true', dest='run_mode')
+  parser.add_argument('-hi', help='Use history information set in hostory file specifed in config/global_values', action='store_true', dest='use_history')
+  parser.add_argument('-nl', help="If set no loggs will be logged in the log files specified in config/global_values", action='store_true', dest = 'no_log')
+  args = parser.parse_args()
+  
   global TEST_MODE
   global NO_LOG
+  global EXECUTED_MODELS
   config_update()
-  if len(unused_argv)> 1:
-    if any("r" in s for s in unused_argv) :
-      TEST_MODE = False
+  if args.run_mode:
+    TEST_MODE = False
+  else:
+    TEST_MODE = True
+
+  if args.use_history:
+    if not os.path.isfile(HISTORY_FILE) and not os.path.isfile(TRAINING_HISTORY_LOG_FILE):
+      print("\033[1;31mWARNING: No 'history' file in 'models' folder. No history read\033[0m")
     else:
-      TEST_MODE = True
-      
-    if any("h" in s for s in unused_argv):
-      if not os.path.isfile(HISTORY_FILE) and not os.path.isfile(TRAINING_HISTORY_LOG_FILE):
-        print("\033[1;31mWARNING: No 'history' file in 'models' folder. No history read\033[0m")
-      else:
-        with open(HISTORY_FILE, 'r', encoding = "utf-8") as hist_file:
-          history = [line.rstrip("\n") for line in hist_file]
-          for hist_entry in history:
-            hist_entry = hist_entry.split("::")
-            name=hist_entry[0]
-            time=hist_entry[1]
-            ttime=0
-            v = None
-            if len(hist_entry) > 2:
-              v = hist_entry[2]
-            if name not in EXECUTED_MODELS:
-              EXECUTED_MODELS[name] = {}
+      with open(HISTORY_FILE, 'r', encoding = "utf-8") as hist_file:
+        history = [line.rstrip("\n") for line in hist_file]
+        for hist_entry in history:
+          hist_entry = hist_entry.split("::")
+          name=hist_entry[0]
+          time=hist_entry[1]
+          ttime=0
+          v = None
+          if len(hist_entry) > 2:
+            v = hist_entry[2]
+          if name not in EXECUTED_MODELS:
+            EXECUTED_MODELS[name] = {}
+            EXECUTED_MODELS[name][mtime] = float(time)
+            EXECUTED_MODELS[name][version] = VersionLog()
+            if v is not None and v is not "":
+              EXECUTED_MODELS[name][version].addExecutedVersion(v)
+            #needs to be taken from seperate file
+            #EXECUTED_MODELS[name][train_time] = float(ttime)
+          else:
+            if EXECUTED_MODELS[name][mtime] < float(time):
               EXECUTED_MODELS[name][mtime] = float(time)
-              EXECUTED_MODELS[name][version] = VersionLog()
-              if v is not None and v is not "":
-                EXECUTED_MODELS[name][version].addExecutedVersion(v)
-              #needs to be taken from seperate file
+              EXECUTED_MODELS[name][version].clean()
+            if v is not None and v is not "":
+              EXECUTED_MODELS[name][version].addExecutedVersion(v)
               #EXECUTED_MODELS[name][train_time] = float(ttime)
-            else:
-              if EXECUTED_MODELS[name][mtime] < float(time):
-                EXECUTED_MODELS[name][mtime] = float(time)
-                EXECUTED_MODELS[name][version].clean()
-              if v is not None and v is not "":
-                EXECUTED_MODELS[name][version].addExecutedVersion(v)
-                #EXECUTED_MODELS[name][train_time] = float(ttime)
-        with open(TRAINING_HISTORY_LOG_FILE, "r") as t_hist_file:
-          t_history = [line.rstrip("\n") for line in t_hist_file]
-          for t_entry in t_history:
-            n,v,t = t_entry.split("::")
-            t = float(t)
-            if n in EXECUTED_MODELS:
-              if EXECUTED_MODELS[n][mtime] < t and EXECUTED_MODELS[n][version].executed(v) is not VersionLog.EXECUTED:
-                EXECUTED_MODELS[n][version].addExecutingVersion(v,t)
-                
-    if any("nl" in s for s in unused_argv):
-      NO_LOG=True
-    else:
-      NO_LOG=False
-      
-    # if any("-b" in s for s in unused_argv):
-    #   if not os.path.isfile(HISTORY_FILE):
-    #     print("\033[1;31mWARNING: No 'blacklist' file in 'models' folder, No models blacklisted\033[0m")
-    #   else:
-    #     with open(HISTORY_FILE, 'r') as bl_file:
-    #       BLACKLISTED_MODELS = [line.rstrip("\n") for line in bl_file]    
+      with open(TRAINING_HISTORY_LOG_FILE, "r") as t_hist_file:
+        t_history = [line.rstrip("\n") for line in t_hist_file]
+        for t_entry in t_history:
+          n,v,t = t_entry.split("::")
+          t = float(t)
+          if n in EXECUTED_MODELS:
+            if EXECUTED_MODELS[n][mtime] < t and EXECUTED_MODELS[n][version].executed(v) is not VersionLog.EXECUTED:
+              EXECUTED_MODELS[n][version].addExecutingVersion(v,t)
+
+  if args.no_log:
+    NO_LOG=True
+  else:
+    NO_LOG=False
+
+  # if any("-b" in s for s in unused_argv):
+  #   if not os.path.isfile(HISTORY_FILE):
+  #     print("\033[1;31mWARNING: No 'blacklist' file in 'models' folder, No models blacklisted\033[0m")
+  #   else:
+  #     with open(HISTORY_FILE, 'r') as bl_file:
+  #       BLACKLISTED_MODELS = [line.rstrip("\n") for line in bl_file]    
 
   # if not TEST_MODE:
   #   logging.basicConfig(filename=LOG_FILE, format = '%(asctime)s ::%(levelname)s - %(message)s')
@@ -547,21 +565,21 @@ def main(unused_argv):
   log("=====================CNN Session ended")
 
 
-class mySess(tf.train.SessionRunHook):
-  def __init__(self):
-    self.tvar = None
-    self.mvar = None
-    self.gvar = None
+# class mySess(tf.train.SessionRunHook):
+#   def __init__(self):
+#     self.tvar = None
+#     self.mvar = None
+#     self.gvar = None
 
-  def end(self, session):
-    self.session = session
+#   def end(self, session):
+#     self.session = session
     
-    self.tvar = session.run({v.name:v.value() for v in tf.trainable_variables()})
-    self.mvar = session.run({v.name:v.value() for v in tf.model_variables()})
-    self.gvar = session.run({v.name:v.value() for v in tf.global_variables()})
-  def after_create_session(self, session, coord):
-    #log("Session devices: {0}".format([dev.name for dev in session.list_devices()]), log_tf=True)
-    pass
+#     self.tvar = session.run({v.name:v.value() for v in tf.trainable_variables()})
+#     self.mvar = session.run({v.name:v.value() for v in tf.model_variables()})
+#     self.gvar = session.run({v.name:v.value() for v in tf.global_variables()})
+#   def after_create_session(self, session, coord):
+#     #log("Session devices: {0}".format([dev.name for dev in session.list_devices()]), log_tf=True)
+#     pass
     
 if __name__ == "__main__":
-  tf.app.run()
+  main()

@@ -1,10 +1,16 @@
-import numpy as np
-import tensorflow as tf
 import string
 import random
 import itertools
 from itertools import product
 import global_values as G
+
+class ModeKeys():
+  '''
+Enum class that defines the keys to use in the models
+'''
+  TRAIN = "Train"
+  PREDICT = "Predict"
+  EVALUATE = "Evaluate"
 
 class version_parameters():
   '''
@@ -22,9 +28,9 @@ Enum class that defines eums for some of the parameters used in versions
   CLASSES_OFFSET = "classes_offset"
   USE_ALL_CLASSES = "use_all_classes"
   
-class Version():
+class VersionS():
   '''
-The class that holds the paramter versions. Every model needs to have the variable 'VERSIONS' set, with an instance of this class.
+The class that holds the paramter versions.
 Also prvodes helper functions to define and add new parameter versions.
 '''
   versions = {}
@@ -123,6 +129,7 @@ Also prvodes helper functions to define and add new parameter versions.
     self.versions[name][version_parameters.LEARNING_RATE] = learning_rate
     self.versions[name][version_parameters.MODEL_DIR_SUFFIX] = model_dir_suffix
     self.versions[name][version_parameters.HOOKS] = hooks
+    #
     self.versions[name][version_parameters.USE_ALL_CLASSES] = use_all_classes
     self.versions[name][version_parameters.CLASSES_COUNT] = classes_count
     self.versions[name][version_parameters.CLASSES_OFFSET] = classes_offset
@@ -188,6 +195,9 @@ The combinations by the above call would be:
       raise ValueError("Version name '{0}' not found".format(version_name))
 
 class VersionLog():
+  '''
+used to maintain model version information.
+'''
   #list of version names
   exectued_versions=[]
   
@@ -231,3 +241,61 @@ def genName():
   return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5))
 
 
+class Model():
+  '''
+each model script should have a global variable `MODEL` set with an instance of this class. Refer to the methods for more details.
+'''
+  versions = None
+  def __init__(versions):
+    self.versions = versions
+    raise NotImplementedError
+
+  def set_current_version(version, model_dir):
+    '''
+During execution, this method will be called to set the version obtained from `self.versions`. Also `model_dir` will provide the destination to save the model in as specified in the config file 
+'''
+    raise NotImplementedError
+  
+  def train_model(input_fn, steps):
+    '''
+This will be called when the model is entering the traning phase. Ideally, what needs to happen in this function is to use the input_fn to obtain the inputs and train the model for a given number of steps. In addition to that other functionalities can be included here as well, such as saving the model parameters during training, etc.
+'''
+    raise NotImplementedError
+
+  def evaluate_model(input_fn, steps):
+    '''
+This will be called when the model is entering the testing phase. Ideally, what needs to happen in this function is to use the input_fn to obtain the inputs and test the model for a given number of steps. In addition to that other functionalities can be included here as well, such as saving the model parameters, producing additional statistics etc.
+'''
+    raise NotImplementedError
+
+
+class DataLoader():
+    def __init__(self, **kargs):
+      raise NotImplementedError
+    
+    #TODO: remove this method? as each version will be given it's own dataloader....
+#     def set_classes(self, use_all_classes, classes_count):
+#       '''
+# This function will be called before the execution of a specific verion of a model. This function can be used to modify the data provided by dataloader based in the needs of the version of the model being executed. 
+# '''
+#       raise NotImplementedError
+    
+    def get_train_input_fn(self, mode= ModeKeys.TRAIN, **kargs):
+      '''
+This function returns a function which will be called when executing the training function of the model, the same function will be used to evaluate the model following training. The return value(s) of the function returned would depend on the how the return function will be used in the model.
+'''
+      raise NotImplementedError
+
+    def get_test_input_fn(self,**kargs):
+      '''
+This function returns a function which will be called when calling the testing function of the model. The return value(s) of the function returned would depend on the how the return function will be used in the model.
+'''
+      raise NotImplementedError
+
+    def get_dataloader_summery(self, **kargs):
+      '''
+This function will be called to log a summery of the dataloader when logging the results of a model
+'''
+      raise NotImplementedError
+
+    
