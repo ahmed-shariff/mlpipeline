@@ -12,6 +12,13 @@ import socket
 import string
 from datetime import datetime
 
+from utils import ExecutionModeKeys
+from utils import version_parameters
+from utils import Model
+from utils import Versions
+from utils import DataLoader
+
+
 from dataLoader import CLASSES_JSON
 from dataLoader import TEST_JSON
 from dataLoader import TRAIN_JSON
@@ -58,9 +65,7 @@ def _main():
   
   if TEST_MODE:
     #shutil.rmtree("models/model_ckpts", ignore_errors=True)
-    logging_iteration_count = 1
     classification_steps = 1
-    tf.reset_default_graph()
     record_training = False
     modestring="\033[1;33mTESTING\033[0m"
   else:
@@ -310,19 +315,20 @@ def _main():
     current_model,version_name, clean_model_dir  = getNextModel()
 
 
-def getClassificationSteps(test_mode, dataLoader, model_dir, epoc_count=EPOC_COUNT, reset_gs=False):
-  if test_mode:
+def getTrainingSteps(mode, model):
+  if mode == ExecutionModeKeys.TEST:
     return 1
   else:
-    complete_steps = epoc_count * len(dataLoader.train_files) / dataLoader.batch_size
-    global_step = tf.train.get_checkpoint_state(model_dir)
-    
-    if global_step is None or reset_gs:
+    current_version = model.get_current_version()
+    complete_steps =  current_version[version_parameters.EPOC_COUNT] * \
+                      len(current_version[version_parameters.DATALOADER].get_train_sample_count) / \
+                      current_version[version_parameters.BATCH_SIZE]
+    global_step = model.get_trained_step_count()
+    if global_step is None or model.reset_steps:
       return complete_steps
     else:
-      gs = int(global_step.model_checkpoint_path.split("-")[-1])
-      if complete_steps > gs:
-        return complete_steps - gs
+      if complete_steps > global_step:
+        return complete_steps - global_step
       else:
         return 0
       
