@@ -101,10 +101,10 @@ Also prvodes helper functions to define and add new parameter versions.
 
     self.versions_defaults[version_parameters.ORDER] = order
     #
-    if hooks is None:
-      self.versions_defaults[version_parameters.HOOKS] = G.HOOKS
-    else:
-      self.versions_defaults[version_parameters.HOOKS] = hooks
+    # if hooks is None:
+    #   self.versions_defaults[version_parameters.HOOKS] = G.HOOKS
+    # else:
+    self.versions_defaults[version_parameters.HOOKS] = hooks
 
     #
     if use_all_classes is None:

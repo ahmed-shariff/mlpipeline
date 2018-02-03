@@ -1,10 +1,7 @@
-import numpy as np
 import os
 import sys
-import random
 import importlib.util
 import shutil
-import subprocess
 import configparser
 import logging
 import socket
@@ -17,25 +14,21 @@ from utils import version_parameters
 from utils import VersionLog
 from utils import console_colors
 
-from helper import Model
-from utils import Versions
-from helper import DataLoader
-
-from utils import VersionLog
+#from helper import Model
+#from utils import Versions
+#from helper import DataLoader
 
 from global_values import MODELS_DIR
-from global_values import DATA_FILE_LOCATION
-from global_values import TEST_FILE_LOCATION
 from global_values import OUTPUT_FILE
 from global_values import HISTORY_FILE
 from global_values import TRAINING_HISTORY_LOG_FILE
 from global_values import LOG_FILE
 from global_values import NO_LOG
-from global_values import DATA_CODE_MAPPING
+#from global_values import DATA_CODE_MAPPING
 from global_values import EXECUTED_MODELS
 from global_values import USE_BLACKLIST
 from global_values import LISTED_MODELS
-from global_values import EPOC_COUNT
+#from global_values import EPOC_COUNT
 
 from global_values import TEST_MODE
 
@@ -44,13 +37,13 @@ from global_values import version
 from global_values import train_time
 from global_values import vless
 
-from global_values import BATCH_SIZE
-from global_values import USE_ALL_CLASSES
-from global_values import CLASSES_COUNT
-from global_values import CLASSES_OFFSET
-from global_values import ALLOW_DELETE_MODEL_DIR
-from global_values import RESTART_GLOBAL_STEP
-from global_values import MODEL_DIR_SUFFIX
+# from global_values import BATCH_SIZE
+# from global_values import USE_ALL_CLASSES
+# from global_values import CLASSES_COUNT
+# from global_values import CLASSES_OFFSET
+# from global_values import ALLOW_DELETE_MODEL_DIR
+# from global_values import RESTART_GLOBAL_STEP
+# from global_values import MODEL_DIR_SUFFIX
 
 #tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -72,10 +65,9 @@ LOGGER.addHandler(handler)
 def _main():
   # sys.path.append(os.getcwd())
   print(list((k, m[version].exectued_versions)  for k,m in EXECUTED_MODELS.items()))
-
-  
+    
   current_model, version_name, clean_model_dir = getNextModel()
-  while current_module is not None:
+  while current_model is not None:
     add_to_and_return_result_string("Model: {0}".format(current_model.name), True)
     add_to_and_return_result_string("Version: {0}".format(version_name))
     log("Model loaded: {0}".format(current_model.name))
@@ -91,7 +83,7 @@ def _main():
       
     #print("\033[1;32mMode: {0}\033[0m".format(modestring))
     if TEST_MODE:
-      log("{0}{1}Mode: {3}TESTING{4}".format(console_colors.YELLOW_FG),
+      log("Mode: {}TESTING".format(console_colors.YELLOW_FG),
           modifier_1 = console_colors.BOLD,
           modifier_2 = console_colors.GREEN_FG)
     else:
@@ -357,13 +349,15 @@ def getNextModel(just_return_model=False):
           if returning_version is None:
             #TODO: check if this like works:
             for v,k in sorted(versions.versions.items(), key=lambda x:x[1][version_parameters.ORDER]):
-              if EXECUTED_MODELS[model.name][version].executed(v.name) is not VersionLog.EXECUTED:
-                returning_version = v.name
+              if EXECUTED_MODELS[model.name][version].executed(v) is not VersionLog.EXECUTED:
+                returning_version = v
                 clean_model_dir = True
           log("Executed versions: {0}".format(EXECUTED_MODELS[model.name][version].exectued_versions),
               log=False)
           if returning_version is None:
             continue
+
+          
           return model, returning_version, clean_model_dir
   return None, None, False
 
