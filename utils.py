@@ -19,6 +19,27 @@ Enum class that defines the keys to use to specify the execution mode of the pip
 '''
   TRAIN = 'Train'
   TEST = 'Test'
+
+class console_colors():
+  RESET = "\033[0m"
+  BOLD = "\033[1m"
+  BLACK_FG = "\033[30m"
+  RED_FG = "\033[31m"
+  GREEN_FG = "\033[32m"
+  YELLOW_FG = "\033[33m"
+  BLUE_FG = "\033[34m"
+  MEGENTA_FG = "\033[35m"
+  CYAN_FG = "\033[36m"
+  WHITE_FG = "\033[37m"
+  BLACK_BG = "\033[40m"
+  RED_BG = "\033[41m"
+  GREEN_BG = "\033[42m"
+  YELLOW_BG = "\033[43m"
+  BLUE_BG = "\033[44m"
+  MEGENTA_BG = "\033[45m"
+  CYAN_BG = "\033[46m"
+  WHITE_BG = "\033[47m"
+  
 class version_parameters():
   '''
 Enum class that defines eums for some of the parameters used in versions
@@ -29,8 +50,10 @@ Enum class that defines eums for some of the parameters used in versions
   EPOC_COUNT = "epoc_count"
   LEARNING_RATE = "learning_rate"
   MODEL_DIR_SUFFIX = "model_dir_suffix"
-  HOOKS = "hooks"
+  ORDER = "order"
+  
   #the rest are not needed for model is general, just mine 
+  HOOKS = "hooks"
   CLASSES_COUNT = "classes_count"
   CLASSES_OFFSET = "classes_offset"
   USE_ALL_CLASSES = "use_all_classes"
@@ -40,6 +63,7 @@ class Versions():
 The class that holds the paramter versions.
 Also prvodes helper functions to define and add new parameter versions.
 '''
+  order_index = 0
   versions = {}
   versions_defaults = {}
   def __init__(self,
@@ -48,6 +72,8 @@ Also prvodes helper functions to define and add new parameter versions.
                batch_size = None,
                epoc_count = None,
                model_dir_suffix = None,
+               order = None,
+               #
                hooks = None,
                #
                use_all_classes = None,
@@ -73,6 +99,8 @@ Also prvodes helper functions to define and add new parameter versions.
     else:
       self.versions_defaults[version_parameters.MODEL_DIR_SUFFIX] = model_dir_suffix
 
+    self.versions_defaults[version_parameters.ORDER] = order
+    #
     if hooks is None:
       self.versions_defaults[version_parameters.HOOKS] = G.HOOKS
     else:
@@ -101,9 +129,10 @@ Also prvodes helper functions to define and add new parameter versions.
            epoc_count = None,
            learning_rate = None,
            model_dir_suffix = None,
-           hooks = None,
+           order = None,
            custom_paramters={},
            #
+           hooks = None,
            use_all_classes = None,
            classes_count = None,
            classes_offset = None):
@@ -118,6 +147,10 @@ Also prvodes helper functions to define and add new parameter versions.
       learning_rate = self.versions_defaults[version_parameters.LEARNING_RATE]
     if model_dir_suffix is None:
       model_dir_suffix = self.versions_defaults[version_parameters.MODEL_DIR_SUFFIX]
+    if order is None:
+      order = self.versions_defaults[version_parameters.ORDER]
+      
+    #
     if hooks is None:
       hooks = self.versions_defaults[version_parameters.HOOKS]
     #
@@ -135,12 +168,19 @@ Also prvodes helper functions to define and add new parameter versions.
     self.versions[name][version_parameters.EPOC_COUNT] = epoc_count
     self.versions[name][version_parameters.LEARNING_RATE] = learning_rate
     self.versions[name][version_parameters.MODEL_DIR_SUFFIX] = model_dir_suffix
+    #
     self.versions[name][version_parameters.HOOKS] = hooks
     #
     self.versions[name][version_parameters.USE_ALL_CLASSES] = use_all_classes
     self.versions[name][version_parameters.CLASSES_COUNT] = classes_count
     self.versions[name][version_parameters.CLASSES_OFFSET] = classes_offset
 
+    if order is None:
+      self.versions[name][version_parameters.ORDER] = self.order_index
+      self.order_index += 1
+    else:
+      self.versions[name][version_parameters.ORDER] = order
+    
     for k,v in custom_paramters.items():
       self.versions[name][k] = v
       
@@ -248,98 +288,6 @@ def genName():
   return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5))
 
 
-class Model():
-  '''
-each model script should have a global variable `MODEL` set with an instance of this class. Refer to the methods for more details.
-'''
-  versions = None
-  allow_delete_model_dir = False
-  reset_steps = False
-  def __init__(self, versions, allow_delete_model_dir=False, reset_steps=False):
-    '''
-version: a instance of Version, which will be used to obtain the versios of the model to execute.
-allow_delete_model_dir: if true, the directory specified by `model_dir` passed to the `pre_execution_hook` will be cleared, essentially removing any saved information of the model. This can be used when the model training needs to be reset. 
-reset_steps: if true, the number of steps that has elapsed will be ignored and number of steps will be calculated as if no training as occurred. if false, the steps will be calucated by deducting the value returned by `get_trained_step_count`. 
-'''
-    if isinstance(versions, Versions):
-      self.versions = versions
-    else:
-      raise ValueError("versions should be an instance of `Versions` class, but recived: {0}".format(type(versions)))
-    self.allow_delete_model_dir = allow_delete_model_dir
-    self.reset_steps = reset_steps
-   
-  def pre_execution_hook(self, version, model_dir, exec_mode=ExecutionModeKeys.TEST):
-    '''
-Before execution, this method will be called to set the version obtained from `self.versions`. Also `model_dir` will provide the destination to save the model in as specified in the config file. The exec_mode will be passed, with on of the keys as specified in `ExecutionModeKeys`.
-'''
-    raise NotImplementedError
-  
-  def train_model(self, input_fn, steps):
-    '''
-This will be called when the model is entering the traning phase. Ideally, what needs to happen in this function is to use the input_fn to obtain the inputs and train the model for a given number of steps. In addition to that other functionalities can be included here as well, such as saving the model parameters during training, etc.
-'''
-    raise NotImplementedError
-
-  def evaluate_model(self,input_fn, steps):
-    '''
-This will be called when the model is entering the testing phase. Ideally, what needs to happen in this function is to use the input_fn to obtain the inputs and test the model for a given number of steps. In addition to that other functionalities can be included here as well, such as saving the model parameters, producing additional statistics etc.
-'''
-    raise NotImplementedError
-
-  def get_current_version(self):
-    '''
-This function should return a dict, which represents the current version.
-'''
-    raise NotImplementedError
-
-  def get_trained_step_count(self):
-    '''
-This function must return either `None` or a positive integer. The is used to determine how many steps have been completed and assess the number of steps the training should take. This is delegated to the `Model` as the process of determining the number is platform specific.
-'''
-    raise NotADirectoryError
-  
-
-
-class DataLoader():
-    def __init__(self, **kargs):
-      raise NotImplementedError
-    
-    #TODO: remove this method? as each version will be given it's own dataloader....
-#     def set_classes(self, use_all_classes, classes_count):
-#       '''
-# This function will be called before the execution of a specific verion of a model. This function can be used to modify the data provided by dataloader based in the needs of the version of the model being executed. 
-# '''
-#       raise NotImplementedError
-    
-    def get_train_input_fn(self, mode= ModeKeys.TRAIN, **kargs):
-      '''
-This function returns a function which will be called when executing the training function of the model, the same function will be used to evaluate the model following training. The return value(s) of the function returned would depend on the how the return function will be used in the model.
-'''
-      raise NotImplementedError
-
-    def get_test_input_fn(self,**kargs):
-      '''
-This function returns a function which will be called when calling the testing function of the model. The return value(s) of the function returned would depend on the how the return function will be used in the model.
-'''
-      raise NotImplementedError
-
-    def get_dataloader_summery(self, **kargs):
-      '''
-This function will be called to log a summery of the dataloader when logging the results of a model
-'''
-      raise NotImplementedError
-
-    def get_train_sample_count(self):
-      '''
-returns the number of datapoints being used as the training dataset. This will be used to assess the number of epocs during training and evaluating.
-'''
-      return NotImplemented
-
-    def get_test_sample_count(self):
-      '''
-returns the number of datapoints being used as the testing dataset. This will be used to assess the number of epocs during training and evaluating.
-'''
-      return NotImplemented
 
 
     
