@@ -104,13 +104,13 @@ This function will be called to log a summery of the dataloader when logging the
     '''
 returns the number of datapoints being used as the training dataset. This will be used to assess the number of epocs during training and evaluating.
 '''
-    return NotImplemented
+    raise NotImplementedError
 
   def get_test_sample_count(self):
     '''
 returns the number of datapoints being used as the testing dataset. This will be used to assess the number of epocs during training and evaluating.
 '''
-    return NotImplemented
+    raise NotImplementedError
 
   def add_to_summery(self, content):
     '''

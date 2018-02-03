@@ -18,6 +18,7 @@ if current_dir not in os.environ['PATH']:
 print(os.environ['PATH'])
 #END DEV SECTION
 
+from utils import ExecutionModeKeys
 from utils import Versions
 from helper import Model
 from helper import DataLoader
@@ -30,14 +31,30 @@ class TestingDataLoader(DataLoader):
   def __init__(self):
     print("creating dataloader")
 
+  def get_train_sample_count(self):
+    return 1000
+
+  def get_test_sample_count(self):
+    return 1000
+  
 class TestingModel(Model):
-  def __init__(self, **args):
-    super(**args)
+  def __init__(self, versions, **args):
+    super().__init__(versions, **args)
+
+  def pre_execution_hook(self, version, model_dir, exec_mode=ExecutionModeKeys.TEST):
+    print("Pre execution")
+    self.current_version = version
+
+  def get_current_version(self):
+    return self.current_version
+
+  def get_trained_step_count(self):
+    return 10
 
 dl = TestingDataLoader()
 v = Versions(0.01, dl)
-v.addV("hahahaha")
-MODEL = Model(v)
+v.addV("ha")
+MODEL = TestingModel(versions = v)
 
 # MODEL_SUMMERY = ""
 # MODEL_SUMMERY_SET = False
