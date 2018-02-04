@@ -143,7 +143,7 @@ def _main():
         # classifier.train(input_fn = dataLoader.get_train_input_fn(),
         #                  steps= classification_steps,
         #                  hooks = hooks)
-        train_output = current_model.train_model(dataloader.get_train_input_fn())
+        train_output = current_model.train_model(dataloader.get_train_input_fn(), classification_steps)
         log("Model traning output: {0}".format(train_output))
         log("Model trained")
         #training_done = True
@@ -178,20 +178,24 @@ def _main():
       #   raise
       except Exception as e:
         #tf.logging.set_verbosity(tf.logging.INFO)
+        if TEST_MODE:
+          raise
         train_results = "Training evaluation failed: {0}".format(str(e))
         log(train_results, logging.ERROR)
         
       try:
-        log("Testing evaluation started: {0} steps".format(evaluation_steps))
+        log("Testing evaluation started: {0} steps".format(test__eval_steps))
         #tf.logging.set_verbosity(tf.logging.ERROR)
         eval_results = current_model.evaluate_model(dataloader.get_test_input_fn(),
         #classifier.evaluate(input_fn = dataLoader.get_test_input_fn(),
-                                                    steps = evaluation_steps)
+                                                    steps = test__eval_steps)
         # except tf.errors.InvalidArgumentError:
         #   tf.logging.set_verbosity(tf.logging.INFO)
         #   raise
       except Exception as e:
         #tf.logging.set_verbosity(tf.logging.INFO)
+        if TEST_MODE:
+          raise
         eval_results = "Test evaluation failed: {0}".format(str(e))
         log(eval_results, logging.ERROR)
         
@@ -237,7 +241,7 @@ def _main():
     add_to_and_return_result_string("Number of epocs: {0}".format(version_spec[version_parameters.EPOC_COUNT]))
     add_to_and_return_result_string("-------------------------------------------")
     add_to_and_return_result_string("MODEL SUMMERY:")
-    add_to_and_return_result_string(Model().summery)
+    add_to_and_return_result_string(current_modelxg.summery)
     add_to_and_return_result_string("-------------------------------------------")
     add_to_and_return_result_string("DATALOADER  SUMMERY:")
     add_to_and_return_result_string(dataloader.summery)

@@ -84,13 +84,13 @@ class DataLoader():
   #       raise NotImplementedError
   def get_train_input_fn(self, mode= ModeKeys.TRAIN, **kargs):
     '''
-    This function returns a function which will be called when executing the training function of the model, the same function will be used to evaluate the model following training. The return value(s) of the function returned would depend on the how the return function will be used in the model.
+    This function returns a function which will be called when executing the training function of the model, the same function will be used to evaluate the model following training. The return value(s) and signature of the function returned would depend on the how the return function will be used in the model.
 '''
     raise NotImplementedError
 
   def get_test_input_fn(self, **kargs):
     '''
-This function returns a function which will be called when calling the testing function of the model. The return value(s) of the function returned would depend on the how the return function will be used in the model.
+This function returns a function which will be called when calling the testing function of the model. The return value(s) and the signature of the function returned would depend on the how the return function will be used in the model.
 '''
     raise NotImplementedError
 

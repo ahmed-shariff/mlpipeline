@@ -8,15 +8,16 @@ import os
 #DEV SECTION: this section, I defined it to help the development of the model script 
 from inspect import getsourcefile
 parent_dir = '/home/amsha/Documents/Research/ml-pipeline'
-current_dir = os.path.dirname(getsourcefile(lambda:0))
-
 if parent_dir not in os.environ['PATH']:
   os.environ['PATH'] = "{}{}{}".format(parent_dir, os.pathsep, os.environ["PATH"])
+#END DEV SECTION
+
+#This section is sepcially needed if the model scripts are not in the same directory from which the pipline is being executed
+current_dir = os.path.dirname(getsourcefile(lambda:0))
 if current_dir not in os.environ['PATH']:
   os.environ['PATH'] = "{}{}{}".format(current_dir, os.pathsep, os.environ["PATH"])
 
 print(os.environ['PATH'])
-#END DEV SECTION
 
 from utils import ExecutionModeKeys
 from utils import Versions
@@ -36,6 +37,13 @@ class TestingDataLoader(DataLoader):
 
   def get_test_sample_count(self):
     return 1000
+
+  def get_train_input_fn(self, **kargs):
+    return lambda:print("got input form train input function")
+
+  def get_test_input_fn(self):
+    return lambda:print("got input form test input function")
+  
   
 class TestingModel(Model):
   def __init__(self, versions, **args):
@@ -50,6 +58,16 @@ class TestingModel(Model):
 
   def get_trained_step_count(self):
     return 10
+
+  def train_model(self, input_fn, steps):
+    print("steps: ", steps)
+    print("calling input fn")
+    input_fn()
+
+  def evaluate_model(self, input_fn, steps):
+    print("steps: ", steps)
+    print("calling input fn")
+    input_fn()
 
 dl = TestingDataLoader()
 v = Versions(0.01, dl)
