@@ -14,6 +14,7 @@ from utils import VersionLog
 from utils import console_colors
 from utils import log
 from utils import set_logger
+from utils import add_script_dir_to_PATH
 #from helper import Model
 #from utils import Versions
 #from helper import DataLoader
@@ -557,6 +558,7 @@ def main(unused_argv):
       NO_LOG=False
 
   set_logger(LOGGER)
+  add_script_dir_to_PATH(MODELS_DIR)
     # if any("-b" in s for s in unused_argv):
     #   if not os.path.isfile(HISTORY_FILE):
     #     print("\033[1;31mWARNING: No 'blacklist' file in 'models' folder, No models blacklisted\033[0m")

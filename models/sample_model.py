@@ -13,7 +13,7 @@ from helper import Model
 from helper import DataLoader
 
 #This section is sepcially needed if the model scripts are not in the same directory from which the pipline is being executed
-add_script_dir_to_PATH(os.path.abspath(os.path.dirname(getsourcefile(lambda:0))))
+#add_script_dir_to_PATH(os.path.abspath(os.path.dirname(getsourcefile(lambda:0))))
 
 from dataLoader import DataLoader
 #import models.dataLoader
