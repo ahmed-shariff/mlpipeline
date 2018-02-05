@@ -568,9 +568,9 @@ def main(unused_argv):
   #   logging.basicConfig(filename=LOG_FILE, format = '%(asctime)s ::%(levelname)s - %(message)s')
   # else:
   #   logging.basicConfig(format = '%(acstime)s ::%(levelname)s - %(message)s')
-  log("=====================CNN session started")
+  log("=====================ML-Pipeline session started")
   _main()
-  log("=====================CNN Session ended")
+  log("=====================ML-Pipeline Session ended")
 
 
     
