@@ -449,7 +449,7 @@ def config_update():
 
 def main(unused_argv):
   config = configparser.ConfigParser(allow_no_value=True)
-  config_file = config.read("models.config")
+  config_file = config.read("mlp.config")
   global TEST_MODE
   global NO_LOG
   global LOGGER
