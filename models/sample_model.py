@@ -51,6 +51,7 @@ class TestingModel(Model):
 
   def pre_execution_hook(self, version, model_dir, exec_mode=ExecutionModeKeys.TEST):
     print("Pre execution")
+    print("Version spec: ", version)
     self.current_version = version
 
   def get_current_version(self):

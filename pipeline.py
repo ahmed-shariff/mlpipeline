@@ -4,16 +4,16 @@ import importlib.util
 import shutil
 import configparser
 import logging
-import socket
 import string
-import re
+import socket
 from datetime import datetime
 
 from utils import ExecutionModeKeys
 from utils import version_parameters
 from utils import VersionLog
 from utils import console_colors
-
+from utils import log
+from utils import set_logger
 #from helper import Model
 #from utils import Versions
 #from helper import DataLoader
@@ -47,24 +47,10 @@ from global_values import vless
 
 #tf.logging.set_verbosity(tf.logging.INFO)
 
-formatter = logging.Formatter(fmt= "%(asctime)s:{0}{1}%(levelname)s:{2}%(name)s{3}- %(message)s" \
-                              .format(console_colors.BOLD,
-                                      console_colors.BLUE_FG,
-                                      console_colors.GREEN_FG,
-                                      console_colors.RESET),
-                              datefmt="%Y-%m-%d %H:%M:%S")
-                                                                              
-LOGGER = logging.getLogger("mlp")
-LOGGER.handlers = []
-LOGGER.setLevel(logging.INFO)
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(formatter)
-handler.setLevel(logging.INFO)
-LOGGER.addHandler(handler)
 
 def _main():
   # sys.path.append(os.getcwd())
-  print(list((k, m[version].exectued_versions)  for k,m in EXECUTED_MODELS.items()))
+  print(list((k, m[version].executed_versions)  for k,m in EXECUTED_MODELS.items()))
     
   current_model, version_name, clean_model_dir = getNextModel()
   while current_model is not None:
@@ -87,7 +73,7 @@ def _main():
           modifier_1 = console_colors.BOLD,
           modifier_2 = console_colors.GREEN_FG)
     else:
-      log("{0}{1}Mode: {3}RUNNING MODEL TRAINING{4}".format(console_colors.RED_FG),
+      log("Mode: {}RUNNING MODEL TRAINING".format(console_colors.RED_FG),
           modifier_1 = console_colors.BOLD,
           modifier_2 = console_colors.GREEN_FG)
       
@@ -241,12 +227,12 @@ def _main():
     add_to_and_return_result_string("Number of epocs: {0}".format(version_spec[version_parameters.EPOC_COUNT]))
     add_to_and_return_result_string("-------------------------------------------")
     add_to_and_return_result_string("MODEL SUMMERY:")
-    add_to_and_return_result_string(current_modelxg.summery)
+    add_to_and_return_result_string(current_model.summery)
     add_to_and_return_result_string("-------------------------------------------")
     add_to_and_return_result_string("DATALOADER  SUMMERY:")
     add_to_and_return_result_string(dataloader.summery)
     if record_training:
-      save_results_to_file(add_to_and_return_result_string(), version_name, current_model)
+      save_results_to_file(add_to_and_return_result_string(), current_model)
         #current_model, eval_results, train_results, dataLoader, training_done, model_dir)
     current_model,version_name, clean_model_dir  = getNextModel()
 
@@ -310,7 +296,7 @@ def getNextModel(just_return_model=False):
           except:
             versions = None
           # print("\n\033[1;32mProcessing new model: {0}\033[1;0m\n".format(module.__name__))  
-          log("{0}{1}Processing new model: {2}{3}".format(console_colors.BOLD,
+          log("{0}{1}Processing model: {2}{3}".format(console_colors.BOLD,
                                                           console_colors.BLUE_FG,
                                                           model.name,
                                                           console_colors.RESET))
@@ -342,7 +328,7 @@ def getNextModel(just_return_model=False):
             EXECUTED_MODELS[model.name][version].clean()
           else:
             t_ = os.path.getmtime(file_path)
-            versions__ = [v_.name for v_ in versions.versions]
+            versions__ = [v_ for v_ in versions.versions]
             for v,t in module_history:
               #print(v,t)
               if t > t_:
@@ -355,7 +341,7 @@ def getNextModel(just_return_model=False):
               if EXECUTED_MODELS[model.name][version].executed(v) is not VersionLog.EXECUTED:
                 returning_version = v
                 clean_model_dir = True
-          log("Executed versions: {0}".format(EXECUTED_MODELS[model.name][version].exectued_versions),
+          log("Executed versions: {0}".format(EXECUTED_MODELS[model.name][version].executed_versions),
               log=False)
           if returning_version is None:
             continue
@@ -389,13 +375,13 @@ def save_training_time(model, version_):
                                             time))
 
     
-def save_results_to_file(resultString, version, model):#model, result, train_result, dataloader, training_done, model_dir):
+def save_results_to_file(resultString, model):#model, result, train_result, dataloader, training_done, model_dir):
   modified_dt = datetime.isoformat(datetime.fromtimestamp(EXECUTED_MODELS[model.name][mtime]))
   result_dt = datetime.now().isoformat()
   
   #add_to_and_return_result_string("\n[{0}]:ml-pipline: output: \n".format(result_dt))
   with open(OUTPUT_FILE, 'a', encoding = "utf-8") as outfile:
-    outfile.write("\n[{0}]:ml-pipline: output: \n")
+    outfile.write("\n[{0}]:ml-pipline: output: \n".format(result_dt))
     outfile.write(resultString)
     # outfile.write("[{0}]: Evaluation on test-set of model{1}: \n\t\t\t{2}\n".format(result_dt,
     #                                                         model.__name__,
@@ -421,54 +407,29 @@ def save_results_to_file(resultString, version, model):#model, result, train_res
     # outfile.write("\n\t\tUsed labels: {0}\n\n".format({i:dataloader.DATA_CODE_MAPPING[i] for i in dataloader.used_labels}))
       
   with open(HISTORY_FILE, 'a', encoding = "utf-8") as hist_file:
+    
     hist_file.write("{0}::{1}::{2}\n".format(model.name,
                                              EXECUTED_MODELS[model.name][mtime],
                                              EXECUTED_MODELS[model.name][version].executing_version))
+    
   EXECUTED_MODELS[model.name][version].moveExecutingToExecuted()
 
-def log(message, level = logging.INFO, log=True, modifier_1=None, modifier_2=None):
-  # if level is not logging.INFO and level is not logging.ERROR:
-  #   raise AttributeError("level cannot be other than logging.INFO or logging.ERROR, coz i am lazy to get others in here")
-  if modifier_1 is None and modifier_2 is None:
-    reset_string = ""
-  else:
-    reset_string = console_colors.RESET
-    
-  if modifier_1 is None:
-    modifier_1 = ""
-  if modifier_2 is None:
-    modifier_2 = ""
-
-  message = "{0}{1}{2}{3}".format(modifier_1, modifier_2, message, reset_string)
-  
-  LOGGER.log(level, message)
-  if not TEST_MODE and not NO_LOG:
-    with open(LOG_FILE, 'a', encoding="utf-8") as log_file:
-      level = ["INFO" if level is logging.INFO else "ERROR"]
-      time = datetime.now().isoformat()
-      cleaned_message = re.sub("\[[0-9;m]*", "", message.translate(str.maketrans({"\x1b":None})))
-      log_file.write("[{0}]::{1} - {2}\n".format(time, level[0], cleaned_message))
 
 def config_update():
   config = configparser.ConfigParser(allow_no_value=True)
-  config_file = config.read("cnn.config")
-  global MODELS_DIR
+  config_file = config.read("models.config")
+  
   global USE_BLACKLIST
   global LISTED_MODELS
   
-  global HISTORY_FILE
-  global LOG_FILE
-  global OUTPUT_FILE
-  global TRAINING_HISTORY_LOG_FILE
   if len(config_file)==0:
-    print("\033[1;031mWARNING:\033[0:031mNo 'cnn.config' file found\033[0m")
+    print("\033[1;031mWARNING:\033[0:031mNo 'models.config' file found\033[0m")
   else:
     try:
-      config["CNN_PARAM"]
+      config["MLP"]
     except KeyError:
-      print("\033[1;031mWARNING:\033[0:031mNo CNN_PARAM section in 'cnn.config' file\033[0m")
-    MODELS_DIR = config.get("CNN_PARAM", "models_dir", fallback=MODELS_DIR)
-    USE_BLACKLIST =  config.getboolean("CNN_PARAM", "use_blacklist", fallback=USE_BLACKLIST)
+      print("\033[1;031mWARNING:\033[0:031mNo MLP section in 'models.config' file\033[0m")
+    USE_BLACKLIST =  config.getboolean("MLP", "use_blacklist", fallback=USE_BLACKLIST)
     try:
       if USE_BLACKLIST:
         LISTED_MODELS = config["BLACKLISTED_MODELS"]
@@ -484,27 +445,70 @@ def config_update():
     except KeyError:
       print("\033[1;031mWARNING:\033[0:031mNo {0} section in 'cnn.config' file\033[0m".format(
         ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0]))
+      
+
+def main(unused_argv):
+  config = configparser.ConfigParser(allow_no_value=True)
+  config_file = config.read("models.config")
+  global TEST_MODE
+  global NO_LOG
+  global LOGGER
+  global MODELS_DIR
+  global HISTORY_FILE
+  global LOG_FILE
+  global OUTPUT_FILE
+  global TRAINING_HISTORY_LOG_FILE
+
+  if len(config_file)==0:
+    print("\033[1;031mWARNING:\033[0:031mNo 'mlp.config' file found\033[0m")
+  else:
+    try:
+      config["MLP"]
+    except KeyError:
+      print("\033[1;031mWARNING:\033[0:031mNo MLP section in 'mlp.config' file\033[0m")
+    MODELS_DIR = config.get("MLP", "models_dir", fallback=MODELS_DIR)
+
 
   hostName = socket.gethostname()
-  OUTPUT_FILE = MODELS_DIR + "/output-{0}".format(hostName)
-  HISTORY_FILE = MODELS_DIR + "/history-{0}".format(hostName)
-  TRAINING_HISTORY_LOG_FILE = MODELS_DIR + "/t_history-{0}".format(hostName)
-  LOG_FILE = MODELS_DIR + "/log-{0}".format(hostName)
+  MODELS_DIR_OUTPUTS = MODELS_DIR + "/outputs"
+  if not os.path.exists(MODELS_DIR_OUTPUTS):
+    os.makedirs(MODELS_DIR_OUTPUTS)
+  OUTPUT_FILE = MODELS_DIR_OUTPUTS + "/output-{0}".format(hostName)
+  HISTORY_FILE = MODELS_DIR_OUTPUTS + "/history-{0}".format(hostName)
+  TRAINING_HISTORY_LOG_FILE = MODELS_DIR_OUTPUTS + "/t_history-{0}".format(hostName)
+  LOG_FILE = MODELS_DIR_OUTPUTS + "/log-{0}".format(hostName)
   open(OUTPUT_FILE, "a").close()
   open(HISTORY_FILE, "a").close()
   open(TRAINING_HISTORY_LOG_FILE, "a").close()
   open(LOG_FILE, "a").close()
 
-      
+  config_update()  
 
-def main(unused_argv):
-  global TEST_MODE
-  global NO_LOG
-  config_update()
-  if len(unused_argv)> 1:
+  #settingup logger
+  formatter = logging.Formatter(fmt= "%(asctime)s:{0}{1}%(levelname)s:{2}%(name)s{3}- %(message)s" \
+                                .format(console_colors.BOLD,
+                                      console_colors.BLUE_FG,
+                                      console_colors.GREEN_FG,
+                                      console_colors.RESET),
+                              datefmt="%Y-%m-%d %H:%M:%S")
+
+  LOGGER = logging.getLogger("mlp")
+  LOGGER.handlers = []
+  LOGGER.setLevel(logging.INFO)
+  handler = logging.StreamHandler(sys.stdout)
+  handler.setFormatter(formatter)
+  handler.setLevel(logging.INFO)
+  LOGGER.addHandler(handler)
+  LOGGER.TEST_MODE = None
+  LOGGER.NO_LOG = None
+  LOGGER.LOG_FILE = LOG_FILE
+
+  if len(unused_argv)> 0:
     if any("r" in s for s in unused_argv) :
+      LOGGER.TEST_MODE = False
       TEST_MODE = False
     else:
+      LOGGER.TEST_MODE = True
       TEST_MODE = True
       
     if any("h" in s for s in unused_argv):
@@ -546,10 +550,13 @@ def main(unused_argv):
                 EXECUTED_MODELS[name][version].addExecutingVersion(v,t)
                 
     if any("nl" in s for s in unused_argv):
+      LOGGER.NO_LOG = True
       NO_LOG=True
     else:
+      LOGGER.NO_LOG = False
       NO_LOG=False
-      
+
+  set_logger(LOGGER)
     # if any("-b" in s for s in unused_argv):
     #   if not os.path.isfile(HISTORY_FILE):
     #     print("\033[1;31mWARNING: No 'blacklist' file in 'models' folder, No models blacklisted\033[0m")
@@ -568,4 +575,4 @@ def main(unused_argv):
 
     
 if __name__ == "__main__":
-  tf.app.run()
+  main([])

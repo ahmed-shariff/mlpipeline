@@ -1,8 +1,14 @@
 import string
 import random
 import itertools
+import logging
+import sys
+import re
 from itertools import product
+from datetime import datetime
 import global_values as G
+
+LOGGER = None
 
 class ModeKeys():
   '''
@@ -246,7 +252,7 @@ class VersionLog():
 used to maintain model version information.
 '''
   #list of version names
-  exectued_versions=[]
+  executed_versions=[]
   
   executing_version=None
   executing_v_time=0.0
@@ -254,7 +260,7 @@ used to maintain model version information.
   EXECUTING = 1
   NOT_EXECUTED = 2
   def __init__(self):
-    self.exectued_versions=[]
+    self.executed_versions=[]
     self.executing_version=None
     self.executing_v_time=0.0
 
@@ -263,12 +269,12 @@ used to maintain model version information.
       return self.EXECUTING
     else:
       #for n, t in self.exectued_versions:
-      if version in self.exectued_versions:
+      if version in self.executed_versions:
         return self.EXECUTED
       return self.NOT_EXECUTED
 
   def addExecutedVersion(self, version_name):
-    self.exectued_versions.append(version_name)
+    self.executed_versions.append(version_name)
 
   def moveExecutingToExecuted(self):
     self.addExecutedVersion(self.executing_version)
@@ -280,14 +286,45 @@ used to maintain model version information.
     self.executing_v_time = train_start_time
     
   def clean(self):
-    self.exectued_versions=[]
+    self.executed_versions=[]
     self.executing_version=None
     self.executing_v_time=0.0
-    
+
+
+def set_logger(logger):
+  global LOGGER
+  LOGGER = logger
+
 def genName():
   return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5))
 
-
-
-
+def log(message, level = logging.INFO, log=True, modifier_1=None, modifier_2=None):
+  # if level is not logging.INFO and level is not logging.ERROR:
+  #   raise AttributeError("level cannot be other than logging.INFO or logging.ERROR, coz i am lazy to get others in here")
+  if modifier_1 is None and modifier_2 is None:
+    reset_string = ""
+  else:
+    reset_string = console_colors.RESET
     
+  if modifier_1 is None:
+    modifier_1 = ""
+  if modifier_2 is None:
+    modifier_2 = ""
+
+  message = "{0}{1}{2}{3}".format(modifier_1, modifier_2, message, reset_string)
+  
+  LOGGER.log(level, message)
+  #TEST_MODE and NO_LOG will be set in the pipline script
+  if not LOGGER.TEST_MODE and not LOGGER.NO_LOG:
+    with open(LOGGER.LOG_FILE, 'a', encoding="utf-8") as log_file:
+      level = ["INFO" if level is logging.INFO else "ERROR"]
+      time = datetime.now().isoformat()
+      cleaned_message = re.sub("\[[0-9;m]*", "", message.translate(str.maketrans({"\x1b":None})))
+      log_file.write("[{0}]::{1} - {2}\n".format(time, level[0], cleaned_message))
+
+def add_script_dir_to_PATH():
+  current_dir = os.path.dirname(getsourcefile(lambda:0))
+  if current_dir not in os.environ['PATH']:
+    os.environ['PATH'] = "{}{}{}".format(current_dir, os.pathsep, os.environ["PATH"])
+
+  log("Added dir `{}` to PATH. New PATH: {}".format(os.environ['PATH']))
