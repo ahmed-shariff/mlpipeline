@@ -4,27 +4,22 @@ import math
 import itertools
 
 import os
-
-#DEV SECTION: this section, I defined it to help the development of the model script 
 from inspect import getsourcefile
-parent_dir = '/home/amsha/Documents/Research/ml-pipeline'
-if parent_dir not in os.environ['PATH']:
-  os.environ['PATH'] = "{}{}{}".format(parent_dir, os.pathsep, os.environ["PATH"])
+#DEV SECTION: this section, I defined it to help the development of the model script 
+
+
 #END DEV SECTION
-
 #This section is sepcially needed if the model scripts are not in the same directory from which the pipline is being executed
-current_dir = os.path.dirname(getsourcefile(lambda:0))
-if current_dir not in os.environ['PATH']:
-  os.environ['PATH'] = "{}{}{}".format(current_dir, os.pathsep, os.environ["PATH"])
-
-print(os.environ['PATH'])
-
+from utils import add_script_dir_to_PATH
 from utils import ExecutionModeKeys
 from utils import Versions
 from helper import Model
 from helper import DataLoader
-#from dataLoader import DataLoader
-import models.dataLoader
+
+add_script_dir_to_PATH(os.path.abspath(os.path.dirname(getsourcefile(lambda:0))))
+
+from dataLoader import DataLoader
+#import models.dataLoader
 
 
 

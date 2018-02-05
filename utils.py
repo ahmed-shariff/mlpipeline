@@ -3,7 +3,9 @@ import random
 import itertools
 import logging
 import sys
+import os
 import re
+from inspect import getsourcefile
 from itertools import product
 from datetime import datetime
 import global_values as G
@@ -322,9 +324,10 @@ def log(message, level = logging.INFO, log=True, modifier_1=None, modifier_2=Non
       cleaned_message = re.sub("\[[0-9;m]*", "", message.translate(str.maketrans({"\x1b":None})))
       log_file.write("[{0}]::{1} - {2}\n".format(time, level[0], cleaned_message))
 
-def add_script_dir_to_PATH():
-  current_dir = os.path.dirname(getsourcefile(lambda:0))
-  if current_dir not in os.environ['PATH']:
-    os.environ['PATH'] = "{}{}{}".format(current_dir, os.pathsep, os.environ["PATH"])
+def add_script_dir_to_PATH(current_dir = None):
+  if current_dir is None:
+    current_dir = os.path.dirname(getsourcefile(lambda:0))
+  if current_dir not in sys.path:
+    sys.path = [current_dir] + sys.path
 
-  log("Added dir `{}` to PATH. New PATH: {}".format(os.environ['PATH']))
+  log("Added dir `{}` to PYTHOAPATH. New PYTHONPATH: {}".format(current_dir, sys.path))
