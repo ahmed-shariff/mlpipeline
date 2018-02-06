@@ -235,11 +235,13 @@ def _main():
     if record_training:
       save_results_to_file(add_to_and_return_result_string(), current_model)
         #current_model, eval_results, train_results, dataLoader, training_done, model_dir)
+    if TEST_MODE:
+      break
     current_model,version_name, clean_model_dir  = getNextModel()
 
 
 def getTrainingSteps(mode, model, clean_model_dir):
-  if mode == ExecutionModeKeys.TEST:
+  if TEST_MODE:
     return 1
   else:
     current_version = model.get_current_version()
@@ -417,8 +419,12 @@ def save_results_to_file(resultString, model):#model, result, train_result, data
 
 
 def config_update():
+  if TEST_MODE:
+    config_from = "models_test.config"
+  else:
+    config_from = "models.config"
   config = configparser.ConfigParser(allow_no_value=True)
-  config_file = config.read("models.config")
+  config_file = config.read(config_from)
   
   global USE_BLACKLIST
   global LISTED_MODELS
