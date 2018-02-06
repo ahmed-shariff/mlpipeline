@@ -6,6 +6,7 @@ import configparser
 import logging
 import string
 import socket
+import argparse
 from datetime import datetime
 
 from utils import ExecutionModeKeys
@@ -47,7 +48,9 @@ from global_values import vless
 # from global_values import MODEL_DIR_SUFFIX
 
 #tf.logging.set_verbosity(tf.logging.INFO)
-
+parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
+parser.add_argument('-r','--run', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true')
+parser.add_argument('-u','--use-history', help='If set will use the history log to determine if a model script has been executed.', action = 'store_true')
 
 def _main():
   # sys.path.append(os.getcwd())
@@ -232,7 +235,7 @@ def _main():
     add_to_and_return_result_string("-------------------------------------------")
     add_to_and_return_result_string("DATALOADER  SUMMERY:")
     add_to_and_return_result_string(dataloader.summery)
-    if record_training:
+    if record_training and not NO_LOG:
       save_results_to_file(add_to_and_return_result_string(), current_model)
         #current_model, eval_results, train_results, dataLoader, training_done, model_dir)
     if TEST_MODE:
@@ -454,7 +457,7 @@ def config_update():
         ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0]))
       
 
-def main(unused_argv):
+def main(argv):
   config = configparser.ConfigParser(allow_no_value=True)
   config_file = config.read("mlp.config")
   global TEST_MODE
@@ -506,19 +509,21 @@ def main(unused_argv):
   handler.setFormatter(formatter)
   handler.setLevel(logging.INFO)
   LOGGER.addHandler(handler)
-  LOGGER.TEST_MODE = None
-  LOGGER.NO_LOG = None
+  LOGGER.TEST_MODE = True
+  TEST_MODE = True
+  LOGGER.NO_LOG = False
+  NO_LOG = False
   LOGGER.LOG_FILE = LOG_FILE
 
-  if len(unused_argv)> 0:
-    if any("r" in s for s in unused_argv) :
+  if argv is not None:#len(unused_argv)> 0:
+    if argv.run:#any("r" in s for s in unused_argv) :
       LOGGER.TEST_MODE = False
       TEST_MODE = False
     else:
       LOGGER.TEST_MODE = True
       TEST_MODE = True
       
-    if any("h" in s for s in unused_argv):
+    if argv.use_history:#any("h" in s for s in unused_argv):
       if not os.path.isfile(HISTORY_FILE) and not os.path.isfile(TRAINING_HISTORY_LOG_FILE):
         print("\033[1;31mWARNING: No 'history' file in 'models' folder. No history read\033[0m")
       else:
@@ -556,12 +561,12 @@ def main(unused_argv):
               if EXECUTED_MODELS[name][mtime] < t and EXECUTED_MODELS[name][version].executed(v) is not VersionLog.EXECUTED:
                 EXECUTED_MODELS[name][version].addExecutingVersion(v,t)
                 
-    if any("nl" in s for s in unused_argv):
-      LOGGER.NO_LOG = True
-      NO_LOG=True
-    else:
-      LOGGER.NO_LOG = False
-      NO_LOG=False
+    #if any("nl" in s for s in unused_argv):
+    #  LOGGER.NO_LOG = True
+    #  NO_LOG=True
+    #else:
+    LOGGER.NO_LOG = False
+    NO_LOG=False
 
   set_logger(LOGGER)
   add_script_dir_to_PATH(MODELS_DIR)
@@ -582,5 +587,7 @@ def main(unused_argv):
 
 
     
-if __name__ == "__main__":
-  main([])
+if __name__ == "__main__":  
+  #print(parser.parse_args().r)
+  main(parser.parse_args())
+  
