@@ -1,0 +1,8 @@
+* Random thoughts
+- How can the data pipeline be more disciplined?
+  - Set up best practices
+- Have one pipeline which is always running, and perhaps another script to send messages to the main pipeline in-place of  
+- The pipeline is already implementation-agnostic, but how does that translate to a salable system? perhaps add another layer which is specific to the library on top of which a model is to b executed? 
+- Online and offline pipelines? The current system is designed for offline training. 
+- How can the deployment process be automated using the pipeline?
+- Better version control for the models and data/metadata.

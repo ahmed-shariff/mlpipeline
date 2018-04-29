@@ -91,15 +91,11 @@ def _main():
       record_training = False
       model_dir = "{0}/outputs/model_ckpts/temp".format(MODELS_DIR.rstrip("/"))
       shutil.rmtree(model_dir, ignore_errors=True)
-      test__eval_steps = 1
-      train_eval_steps = 1
     else:
       record_training = True
       model_dir="{0}/outputs/model_ckpts/{1}-{2}".format(MODELS_DIR.rstrip("/"),
                                                          current_model.name.split(".")[-2],
                                                          model_dir_suffix)
-      test__eval_steps = dataloader.get_test_sample_count()#len(dataLoader.test_files)
-      train_eval_steps = dataloader.get_train_sample_count()#len(dataLoader.train_files)
       #int(len(dataLoader.train_files)/dataLoader.batch_size)
     # Train the model
     #classifier_executed=False
@@ -125,6 +121,13 @@ def _main():
       #   model_dir=model_dir)
 
       current_model.pre_execution_hook(version_spec, model_dir)
+      if TEST_MODE:
+        test__eval_steps = 1
+        train_eval_steps = 1
+      else:
+        test__eval_steps = dataloader.get_test_sample_count()#len(dataLoader.test_files)
+        train_eval_steps = dataloader.get_train_sample_count()#len(dataLoader.train_files)
+
       save_training_time(current_model, version_name)
       #classification_steps = getClassificationSteps(TEST_MODE, dataLoader, model_dir, epoc_count, reset_gs)
       classification_steps = getTrainingSteps(ExecutionModeKeys.TRAIN, current_model, clean_model_dir)
@@ -457,7 +460,7 @@ def config_update():
         ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0]))
       
 
-def main(argv):
+def main(argv=None):
   config = configparser.ConfigParser(allow_no_value=True)
   config_file = config.read("mlp.config")
   global TEST_MODE
@@ -555,7 +558,7 @@ def main(argv):
         with open(TRAINING_HISTORY_LOG_FILE, "r") as t_hist_file:
           t_history = [line.rstrip("\n") for line in t_hist_file]
           for t_entry in t_history:
-            n,v,t = t_entry.split("::")
+            name,v,t = t_entry.split("::")
             t = float(t)
             if name in EXECUTED_MODELS:
               if EXECUTED_MODELS[name][mtime] < t and EXECUTED_MODELS[name][version].executed(v) is not VersionLog.EXECUTED:
