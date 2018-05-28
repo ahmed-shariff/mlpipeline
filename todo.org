@@ -6,3 +6,5 @@
 - Online and offline pipelines? The current system is designed for offline training. 
 - How can the deployment process be automated using the pipeline?
 - Better version control for the models and data/metadata.
+- Commit following each train and eval loop.
+- Group a set of files as a experiment.
