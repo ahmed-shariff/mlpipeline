@@ -9,3 +9,4 @@
 - Commit following each train and eval loop.
 - Group a set of files as a experiment.
 - Add a function that will be executed at the end of the loop, where I can add stuff like moving files, etc.
+- How can I handle situations where I want to relaunch the same experiment? use multiple versions with different names?
