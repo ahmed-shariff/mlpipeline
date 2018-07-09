@@ -11,3 +11,4 @@
 - Add a function that will be executed at the end of the loop, where I can add stuff like moving files, etc.
 - How can I handle situations where I want to relaunch the same experiment? use multiple versions with different names?
 - The classification steps passed to the training component, what if the steps calculated that way is too confusing? like I only want the number of epocs be passed?
+- clean a easier logging.
