@@ -293,9 +293,25 @@ used to maintain model version information.
     self.executing_v_time=0.0
 
 
-def set_logger(logger):
-  global LOGGER
-  LOGGER = logger
+def set_logger(test_mode = True, no_log = True):
+    global LOGGER
+    formatter = logging.Formatter(fmt= "%(asctime)s:{0}{1}%(levelname)s:{2}%(name)s{3}- %(message)s" \
+                                  .format(console_colors.BOLD,
+                                          console_colors.BLUE_FG,
+                                          console_colors.GREEN_FG,
+                                          console_colors.RESET),
+                                  datefmt="%Y-%m-%d %H:%M:%S")
+
+    LOGGER = logging.getLogger("mlp")
+    LOGGER.handlers = []
+    LOGGER.setLevel(logging.INFO)
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.INFO)
+    LOGGER.addHandler(handler)
+    LOGGER.TEST_MODE = test_mode
+    LOGGER.NO_LOG = no_log
+    LOGGER.LOG_FILE = LOG_FILE
 
 def genName():
   return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5))
