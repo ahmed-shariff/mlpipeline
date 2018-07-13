@@ -1,6 +1,8 @@
 from utils import Versions
 from utils import ExecutionModeKeys
 from utils import ModeKeys
+from utils import log
+from utils import console_colors
 
 class Model():
   '''
@@ -69,6 +71,15 @@ try to include the relevent information you would want to refer to when assessin
       self.summery = ""
     self.summery += "\t\t{0}\n".format(content)
 
+  def log(self, message,log_to_file=False, **kargs):
+    '''
+    This Function can be used to log details from within the model
+    '''
+    log("{}Model- {}{}".format(console_colors.CYAN_FG,
+                               console_colors.RESET,
+                               message),
+        log=log_to_file, **kargs)
+
 
 
 class DataLoader():
@@ -119,3 +130,13 @@ This function can be used to set the summery of the dataloader, which will be ad
     if self.summery is None:
       self.summery = ""
     self.summery += "\t\t{0}\n".format(content)
+  def log(self, message,log_to_file=False, **kargs):
+    '''
+    This Function can be used to log details from within the dataloader
+    '''
+    log("{}Model- {}{}".format(console_colors.CYAN_FG,
+                               console_colors.RESET,
+                               message),
+        log=log_to_file, **kargs)
+
+    
