@@ -136,7 +136,7 @@ def _main():
         # classifier.train(input_fn = dataLoader.get_train_input_fn(),
         #                  steps= classification_steps,
         #                  hooks = hooks)
-        train_output = current_model.train_model(dataloader.get_train_input_fn(), classification_steps)
+        train_output = current_model.train_model(dataloader.get_train_input(), classification_steps)
         log("Model traning output: {0}".format(train_output))
         log("Model trained")
         #training_done = True
@@ -163,7 +163,7 @@ def _main():
       # Evaluate the model and print results
       try:
         log("Training evaluation started: {0} steps".format(train_eval_steps))
-        train_results = current_model.evaluate_model(dataloader.get_train_input_fn(mode = ExecutionModeKeys.TEST),
+        train_results = current_model.evaluate_model(dataloader.get_train_input(mode = ExecutionModeKeys.TEST),
         #classifier.evaluate(input_fn = dataLoader.get_train_input_fn(tf.estimator.ModeKeys.EVAL),# dataLoader.get_test_input_fn(),
                                                steps = train_eval_steps)
       # except tf.errors.InvalidArgumentError:
@@ -179,7 +179,7 @@ def _main():
       try:
         log("Testing evaluation started: {0} steps".format(test__eval_steps))
         #tf.logging.set_verbosity(tf.logging.ERROR)
-        eval_results = current_model.evaluate_model(dataloader.get_test_input_fn(),
+        eval_results = current_model.evaluate_model(dataloader.get_test_input(),
         #classifier.evaluate(input_fn = dataLoader.get_test_input_fn(),
                                                     steps = test__eval_steps)
         # except tf.errors.InvalidArgumentError:
