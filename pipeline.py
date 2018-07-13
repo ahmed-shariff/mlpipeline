@@ -109,7 +109,7 @@ def _main():
         #shutil.rmtree(model_dir, ignore_errors=True)
         current_model.clean_model_dir(model_dir)
         #print("\033[1;038mclearning folder {0}\033[0m".format(model_dir))
-        log("{0}{1}{}")
+        log("Cleaned model dir", modifier_1 = console_colors.RED_FG)
         # if clean_model_dir and not allow_delete_model_dir and restart_global_step:
       #   reset_gs = True
       # else:
@@ -171,10 +171,10 @@ def _main():
       #   raise
       except Exception as e:
         #tf.logging.set_verbosity(tf.logging.INFO)
-        if TEST_MODE:
-          raise
         train_results = "Training evaluation failed: {0}".format(str(e))
         log(train_results, logging.ERROR)
+        if TEST_MODE:
+          raise
         
       try:
         log("Testing evaluation started: {0} steps".format(test__eval_steps))
@@ -187,10 +187,10 @@ def _main():
         #   raise
       except Exception as e:
         #tf.logging.set_verbosity(tf.logging.INFO)
-        if TEST_MODE:
-          raise
         eval_results = "Test evaluation failed: {0}".format(str(e))
         log(eval_results, logging.ERROR)
+        if TEST_MODE:
+          raise
         
       log("Model evaluation complete")
     # except tf.errors.ResourceExhaustedError:
@@ -243,6 +243,7 @@ def _main():
         #current_model, eval_results, train_results, dataLoader, training_done, model_dir)
     if TEST_MODE:
       break
+    current_model = None
     current_model,version_name, clean_model_dir  = getNextModel()
 
 
@@ -460,7 +461,7 @@ def config_update():
         ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0]))
       
 
-def main(argv=None):
+def main(argv):
   config = configparser.ConfigParser(allow_no_value=True)
   config_file = config.read("mlp.config")
   global TEST_MODE

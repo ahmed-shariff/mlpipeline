@@ -317,7 +317,7 @@ def log(message, level = logging.INFO, log=True, modifier_1=None, modifier_2=Non
   
   LOGGER.log(level, message)
   #TEST_MODE and NO_LOG will be set in the pipline script
-  if not LOGGER.TEST_MODE and not LOGGER.NO_LOG:
+  if not LOGGER.TEST_MODE and not LOGGER.NO_LOG and log:
     with open(LOGGER.LOG_FILE, 'a', encoding="utf-8") as log_file:
       level = ["INFO" if level is logging.INFO else "ERROR"]
       time = datetime.now().isoformat()
