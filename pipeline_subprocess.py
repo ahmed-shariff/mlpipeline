@@ -35,34 +35,36 @@ from global_values import train_time
 from global_values import vless
 
 parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
+parser.add_argument("file_path", help='The file path of the model to be executed')
+parser.add_argument("models_dir", help='The directory in which the models reside, also where the results are to stored')
 parser.add_argument('-r','--run', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true')
 parser.add_argument('-u','--use-history', help='If set will use the history log to determine if a model script has been executed.', action = 'store_true')
 parser.add_argument('-n','--no_log', help='If set non of the logs will be appended to the log files.', action = 'store_true')
 
 def _main(file_path):
-    current_model, version_name, clean_model_dir = getModel(file_path)
-    add_to_and_return_result_string("Model: {0}".format(current_model.name), True)
-    add_to_and_return_result_string("Version: {0}".format(version_name))
+    current_model, version_name, clean_model_dir = _get_model(file_path)
+    _add_to_and_return_result_string("Model: {0}".format(current_model.name), True)
+    _add_to_and_return_result_string("Version: {0}".format(version_name))
     log("Model loaded: {0}".format(current_model.name))
     if version_name is None:
-	log("No Version Specifications",
+        log("No Version Specifications",
 	    logging.WARNING,
 	    modifier_1 = console_colors.RED_FG,
 	    modifier_2 = console_colors.BOLD)
     else:
-    log("version loaded: {0}".format(version_name),
+        log("version loaded: {0}".format(version_name),
 	  modifier_1 = console_colors.GREEN_FG,
 	  modifier_2 = console_colors.BOLD)
       
     #print("\033[1;32mMode: {0}\033[0m".format(modestring))
     if TEST_MODE:
-      log("Mode: {}TESTING".format(console_colors.YELLOW_FG),
-	  modifier_1 = console_colors.BOLD,
-	  modifier_2 = console_colors.GREEN_FG)
+        log("Mode: {}TESTING".format(console_colors.YELLOW_FG),
+	    modifier_1 = console_colors.BOLD,
+	    modifier_2 = console_colors.GREEN_FG)
     else:
-      log("Mode: {}RUNNING MODEL TRAINING".format(console_colors.RED_FG),
-	  modifier_1 = console_colors.BOLD,
-	  modifier_2 = console_colors.GREEN_FG)
+        log("Mode: {}RUNNING MODEL TRAINING".format(console_colors.RED_FG),
+	    modifier_1 = console_colors.BOLD,
+	    modifier_2 = console_colors.GREEN_FG)
       
     version_spec = current_model.versions.getVersion(version_name)
       
@@ -71,197 +73,119 @@ def _main(file_path):
     dataloader = version_spec[version_parameters.DATALOADER]
     
     if TEST_MODE:
-      record_training = False
-      model_dir = "{0}/outputs/model_ckpts/temp".format(MODELS_DIR.rstrip("/"))
-      shutil.rmtree(model_dir, ignore_errors=True)
+        record_training = False
+        model_dir = "{0}/outputs/model_ckpts/temp".format(MODELS_DIR.rstrip("/"))
+        shutil.rmtree(model_dir, ignore_errors=True)
     else:
-      record_training = True
-      model_dir="{0}/outputs/model_ckpts/{1}-{2}".format(MODELS_DIR.rstrip("/"),
+        record_training = True
+        model_dir="{0}/outputs/model_ckpts/{1}-{2}".format(MODELS_DIR.rstrip("/"),
 							 current_model.name.split(".")[-2],
 							 model_dir_suffix)
-      #int(len(dataLoader.train_files)/dataLoader.batch_size)
-    # Train the model
-    #classifier_executed=False
-    #exception_count = batch_size #maximum numeber of possible time this can loop!! if more, prolly inifinite loop
     eval_complete=False
-    #training_done = False
-    #while not classifier_executed:
-    LOGGER.setLevel(logging.INFO)
+    #LOGGER.setLevel(logging.INFO)
+
+    train_results = ""
+    eval_results = ""
+    
     try:
-      if clean_model_dir and current_model.allow_delete_model_dir:
-	#shutil.rmtree(model_dir, ignore_errors=True)
-	current_model.clean_model_dir(model_dir)
-	#print("\033[1;038mclearning folder {0}\033[0m".format(model_dir))
-	log("Cleaned model dir", modifier_1 = console_colors.RED_FG)
-	# if clean_model_dir and not allow_delete_model_dir and restart_global_step:
-      #	  reset_gs = True
-      # else:
-      #	  reset_gs = False
-      # s = mySess()
-      # hooks = [s, logging_hook] + verion_hooks
-      # classifier = tf.estimator.Estimator(
-      #	  model_fn=current_model.get_model_fn(version_name, dataLoader.classes_count, reset_gs),
-      #	  model_dir=model_dir)
+        if clean_model_dir and current_model.allow_delete_model_dir:
+            current_model.clean_model_dir(model_dir)
+            log("Cleaned model dir", modifier_1 = console_colors.RED_FG)
+        current_model.pre_execution_hook(version_spec, model_dir)
+        if TEST_MODE:
+            test__eval_steps = 1
+            train_eval_steps = 1
+        else:
+            test__eval_steps = dataloader.get_test_sample_count()
+            train_eval_steps = dataloader.get_train_sample_count()
 
-      current_model.pre_execution_hook(version_spec, model_dir)
-      if TEST_MODE:
-	test__eval_steps = 1
-	train_eval_steps = 1
-      else:
-	test__eval_steps = dataloader.get_test_sample_count()#len(dataLoader.test_files)
-	train_eval_steps = dataloader.get_train_sample_count()#len(dataLoader.train_files)
+        _save_training_time(current_model, version_name)
+        classification_steps = _get_training_steps(ExecutionModeKeys.TRAIN, current_model, clean_model_dir)
+        log("Steps: {0}".format(classification_steps))
+        if classification_steps > 0:
+            train_output = current_model.train_model(dataloader.get_train_input(), classification_steps)
+            log("Model traning output: {0}".format(train_output))
+            log("Model trained")
+        else:
+            log("No training. Loaded pretrained model")
 
-      save_training_time(current_model, version_name)
-      #classification_steps = getClassificationSteps(TEST_MODE, dataLoader, model_dir, epoc_count, reset_gs)
-      classification_steps = getTrainingSteps(ExecutionModeKeys.TRAIN, current_model, clean_model_dir)
-      log("Steps: {0}".format(classification_steps))
-      if classification_steps > 0:
-	# classifier.train(input_fn = dataLoader.get_train_input_fn(),
-	#		   steps= classification_steps,
-	#		   hooks = hooks)
-	train_output = current_model.train_model(dataloader.get_train_input(), classification_steps)
-	log("Model traning output: {0}".format(train_output))
-	log("Model trained")
-	#training_done = True
-      else:
-	# classifier.train(input_fn = dataLoader.get_train_input_fn(),
-	#		   steps= 1,
-	#		   hooks = [logging_hook,s])
-
-	log("No training. Loaded pretrained model")
-	#training_done = False
-      #classifier_executed = True
-
-      # if s.tvar is not None:
-      #	  log("Trainable parms: {0}".format(
-      #	    sum([v.flatten().shape[0] for k,v in s.tvar.items()])),
-      #	      log_tf=True)
-      #	  print({k: v.flatten().shape[0] for k,v in s.tvar.items()})
-      # print("*************************************************")
-      # print(len([k for k,v in s.mvar.items()]))
-      # print([k for k,v in s.mvar.items()])
-      # print("*************************************************")
-      # print(len([k for k,v in s.gvar.items()]))
-      # print([k for k,v in s.gvar.items()])
-      # Evaluate the model and print results
-      try:
-	log("Training evaluation started: {0} steps".format(train_eval_steps))
-	train_results = current_model.evaluate_model(dataloader.get_train_input(mode = ExecutionModeKeys.TEST),
-	#classifier.evaluate(input_fn = dataLoader.get_train_input_fn(tf.estimator.ModeKeys.EVAL),# dataLoader.get_test_input_fn(),
-					       steps = train_eval_steps)
-      # except tf.errors.InvalidArgumentError:
-      #	  tf.logging.set_verbosity(tf.logging.INFO)
-      #	  raise
-      except Exception as e:
-	#tf.logging.set_verbosity(tf.logging.INFO)
-	train_results = "Training evaluation failed: {0}".format(str(e))
-	log(train_results, logging.ERROR)
-	if TEST_MODE:
-	  raise
+        try:
+            log("Training evaluation started: {0} steps".format(train_eval_steps))
+            train_results = current_model.evaluate_model(dataloader.get_train_input(mode = ExecutionModeKeys.TEST),
+                                                         steps = train_eval_steps)
+        except Exception as e:
+            train_results = "Training evaluation failed: {0}".format(str(e))
+            log(train_results, logging.ERROR)
+            if TEST_MODE:
+                raise
+            
+        try:
+            log("Testing evaluation started: {0} steps".format(test__eval_steps))
+            eval_results = current_model.evaluate_model(dataloader.get_test_input(),
+						      steps = test__eval_steps)
+        except Exception as e:
+            eval_results = "Test evaluation failed: {0}".format(str(e))
+            log(eval_results, logging.ERROR)
+            if TEST_MODE:
+                raise
 	
-      try:
-	log("Testing evaluation started: {0} steps".format(test__eval_steps))
-	#tf.logging.set_verbosity(tf.logging.ERROR)
-	eval_results = current_model.evaluate_model(dataloader.get_test_input(),
-	#classifier.evaluate(input_fn = dataLoader.get_test_input_fn(),
-						    steps = test__eval_steps)
-	# except tf.errors.InvalidArgumentError:
-	#   tf.logging.set_verbosity(tf.logging.INFO)
-	#   raise
-      except Exception as e:
-	#tf.logging.set_verbosity(tf.logging.INFO)
-	eval_results = "Test evaluation failed: {0}".format(str(e))
-	log(eval_results, logging.ERROR)
-	if TEST_MODE:
-	  raise
-	
-      log("Model evaluation complete")
-    # except tf.errors.ResourceExhaustedError:
-    #	dataLoader.batch_size -= 1
-    #	log("ResourceExhaustedError: reducing batch_size to {0}".format(dataLoader.batch_size))
-    #	print("\033[1;031mResourceExhaustedError: reducing batch_size to {0}\033[0m".format(dataLoader.batch_size))
-    # except tf.errors.InvalidArgumentError as e:
-    #	if not allow_delete_model_dir:
-    #	  log("{0}".format(str(e)))
-    #	  log("Not cleaning folder, skiping evaluation")
-    #	else:
-    #	  classifier_executed = False
-    #	  classifier =None
-    #	  #shutil.rmtree(model_dir, ignore_errors=True)
-    #	  subprocess.run(["rm", "-rf", model_dir])
-    #	  log("InvalidArgumentError: clearning folder {0}".format(model_dir), logging.ERROR)
-    #	  print("\033[1;031mInvalidArgumentError: clearning folder {0}\033[0m".format(model_dir))
-    # TODO: Nan error: reduce learning rate
+        log("Model evaluation complete")
     except Exception as e:
-      if TEST_MODE is True:
-	raise
-      else:
-	log("Exception: {0}".format(str(e)), logging.ERROR)
-	#TODO: do this?
-	# if NO_LOG:
-	#   raise
-    # try:
-    #	print("Training result: {0}".format(train_results))
-    # except		      :
-    #	print("Training result: evaluation failed")
-    #	eval_results="Evaluation failed due to unknown reason"
-    # try:
-    #	print("Evaluation result: {0}".format(eval_results))
-    # except:
-    #	print("Evaluation result: evaluation failed")
-    # eval_results="Evaluation failed due to unknown reason"
-    add_to_and_return_result_string("Eval on train set: {0}".format(train_results))
-    add_to_and_return_result_string("Eval on test  set: {0}".format(eval_results))
-    add_to_and_return_result_string("-------------------------------------------")
-    add_to_and_return_result_string("EXECUTION SUMMERY:")
-    add_to_and_return_result_string("Number of epocs: {0}".format(version_spec[version_parameters.EPOC_COUNT]))
-    add_to_and_return_result_string("-------------------------------------------")
-    add_to_and_return_result_string("MODEL SUMMERY:")
-    add_to_and_return_result_string(current_model.summery)
-    add_to_and_return_result_string("-------------------------------------------")
-    add_to_and_return_result_string("DATALOADER	 SUMMERY:")
-    add_to_and_return_result_string(dataloader.summery)
+        if TEST_MODE is True:
+            raise
+        else:
+            log("Exception: {0}".format(str(e)), logging.ERROR)
+
+    log("Eval on train set: {0}".format(train_results))
+    log("Eval on test set:  {0}".format(eval_results))
+    _add_to_and_return_result_string("Eval on train set: {0}".format(train_results))
+    _add_to_and_return_result_string("Eval on test  set: {0}".format(eval_results))
+    _add_to_and_return_result_string("-------------------------------------------")
+    _add_to_and_return_result_string("EXECUTION SUMMERY:")
+    _add_to_and_return_result_string("Number of epocs: {0}".format(version_spec[version_parameters.EPOC_COUNT]))
+    _add_to_and_return_result_string("-------------------------------------------")
+    _add_to_and_return_result_string("MODEL SUMMERY:")
+    _add_to_and_return_result_string(current_model.summery)
+    _add_to_and_return_result_string("-------------------------------------------")
+    _add_to_and_return_result_string("DATALOADER	 SUMMERY:")
+    _add_to_and_return_result_string(dataloader.summery)
     if record_training and not NO_LOG:
-      save_results_to_file(add_to_and_return_result_string(), current_model)
-	#current_model, eval_results, train_results, dataLoader, training_done, model_dir)
-    current_model = None
-    current_model,version_name, clean_model_dir	 = getNextModel()
+        _save_results_to_file(_add_to_and_return_result_string(), current_model)
 
-
-def getTrainingSteps(mode, model, clean_model_dir):
+def _get_training_steps(mode, model, clean_model_dir):
     if TEST_MODE:
-	return 1
+        return 1
     else:
-	current_version = model.get_current_version()
-	complete_steps =  current_version[version_parameters.EPOC_COUNT] * \
-	  current_version[version_parameters.DATALOADER].get_train_sample_count() / \
-	  current_version[version_parameters.BATCH_SIZE]
-	global_step = model.get_trained_step_count()
-	if global_step is None or model.reset_steps:
-	    return complete_steps
-
-	  #TODO: why did i add the reset_step here?
-	elif clean_model_dir and not model.allow_delete_model_dir and model.reset_steps:
-	    return complete_steps
-	else:
-	    if complete_steps > global_step:
-		return complete_steps - global_step
-	    else:
-		return 0
+        current_version = model.get_current_version()
+        complete_steps =  current_version[version_parameters.EPOC_COUNT] * \
+            current_version[version_parameters.DATALOADER].get_train_sample_count() / \
+            current_version[version_parameters.BATCH_SIZE]
+        global_step = model.get_trained_step_count()
+        if global_step is None or model.reset_steps:
+            return complete_steps
+        
+                #TODO: why did i add the reset_step here?
+        elif clean_model_dir and not model.allow_delete_model_dir and model.reset_steps:
+            return complete_steps
+        else:
+            if complete_steps > global_step:
+                return complete_steps - global_step
+            else:
+                return 0
       
-def getModel(file_path, just_return_model=False):
+def _get_model(file_path, just_return_model=False):
     # Import and load the model
-    spec = importlib.util.spec_from_file_location(f,file_path)
+    spec = importlib.util.spec_from_file_location(file_path.split("/")[-1],file_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     clean_model_dir = False
     model = None
     try:
-	model = module.MODEL
-	model.name = file_path
+        model = module.MODEL
+        model.name = file_path
     except:
-	log("{0} is not a model script. It does not contain a `MODEL` global variable".format(file_path))
-	return None, None, False
+        log("{0} is not a model script. It does not contain a `MODEL` global variable".format(file_path))
+        return None, None, False
 
     # TODO: why did i add this in the first place??
     # if just_return_model:
@@ -271,24 +195,24 @@ def getModel(file_path, just_return_model=False):
     # Figure our which version should be executed next
     returning_version = None
     try:
-	versions = model.versions
+        versions = model.versions
     except:
-	versions = None
+        versions = None
     log("{0}{1}Processing model: {2}{3}".format(console_colors.BOLD,
-						    console_colors.BLUE_FG,
-						    model.name,
-						    console_colors.RESET))
+						console_colors.BLUE_FG,
+						model.name,
+						console_colors.RESET))
 
     ## Get the training history. i.e. the time stamps of each training launched
     with open(TRAINING_HISTORY_LOG_FILE, "r") as t_hist_file:
-	t_history = [line.rstrip("\n") for line in t_hist_file]
-	all_history = [t_entry.split("::") for t_entry in t_history]
-	module_history = [(v,float(t)) for n,v,t in all_history if n == model.name]
+        t_history = [line.rstrip("\n") for line in t_hist_file]
+        all_history = [t_entry.split("::") for t_entry in t_history]
+        module_history = [(v,float(t)) for n,v,t in all_history if n == model.name]
 
     if file_path not in EXECUTED_MODELS:
-	EXECUTED_MODELS[model.name] = {}
-	EXECUTED_MODELS[model.name][train_time]=0
-	EXECUTED_MODELS[model.name][version]=VersionLog()
+        EXECUTED_MODELS[model.name] = {}
+        EXECUTED_MODELS[model.name][train_time]=0
+        EXECUTED_MODELS[model.name][version]=VersionLog()
 
     EXECUTED_MODELS[model.name][mtime] = os.path.getmtime(file_path)
 
@@ -299,72 +223,72 @@ def getModel(file_path, just_return_model=False):
     reset_model_dir = True
     modified_time = os.path.getmtime(file_path)
     for v,t in module_history:
-	if t > modified_time:
-	  reset_model_dir = False
+        if t > modified_time:
+            reset_model_dir = False
     if reset_model_dir:
-	clean_model_dir = True
-	EXECUTED_MODELS[model.name][version].clean()
+        clean_model_dir = True
+        EXECUTED_MODELS[model.name][version].clean()
     else:
-	# If a training had started and not completed, resume the training of that version
-	versions__ = [v_ for v_ in versions.versions]
-	for v,t in module_history:
-	    if t > modified_time:
-		if EXECUTED_MODELS[model.name][version].executed(v) is not VersionLog.EXECUTED and v in versions__:
-		    modified_time = t
-		    returning_version = v
+        # If a training had started and not completed, resume the training of that version
+        versions__ = [v_ for v_ in versions.versions]
+        for v,t in module_history:
+            if t > modified_time:
+                if EXECUTED_MODELS[model.name][version].executed(v) is not VersionLog.EXECUTED and v in versions__:
+                    modified_time = t
+                    returning_version = v
     ## If there are no training sessions to be resumed, decide which version to execute next based on the ORDER set in the version
     if returning_version is None:
-	#TODO: check if this line works:
-	for v,k in sorted(versions.versions.items(), key=lambda x:x[1][version_parameters.ORDER]):
-	    if EXECUTED_MODELS[model.name][version].executed(v) is not VersionLog.EXECUTED:
-		returning_version = v
-		clean_model_dir = True
+        #TODO: check if this line works:
+        for v,k in sorted(versions.versions.items(), key=lambda x:x[1][version_parameters.ORDER]):
+            if EXECUTED_MODELS[model.name][version].executed(v) is not VersionLog.EXECUTED:
+                returning_version = v
+                clean_model_dir = True
     log("Executed versions: {0}".format(EXECUTED_MODELS[model.name][version].executed_versions),
-	log=False)
+        log=False)
     if returning_version is None:
-	return None, None, False
+        return None, None, False
     return model, returning_version, clean_model_dir
     
 
-def add_to_and_return_result_string(message=None, reset_result_string = False, indent = True):
+def _add_to_and_return_result_string(message=None, reset_result_string = False, indent = True):
     global result_string
     if message is not None:
-	if indent:
-	    message = "\t\t" + message
-	if reset_result_string:
-	    result_string = message + "\n"
-	else:
-	    result_string += message + "\n"
+        if indent:
+            message = "\t\t" + message
+        if reset_result_string:
+            result_string = message + "\n"
+        else:
+            result_string += message + "\n"
     return result_string
 
-def save_training_time(model, version_):
+def _save_training_time(model, version_):
     if TEST_MODE:
-	return
+        return
     name = model.name
     with open(TRAINING_HISTORY_LOG_FILE, "a") as log_file:
-	time = datetime.now().timestamp()
-	EXECUTED_MODELS[name][version].addExecutingVersion(version_, time)
-	log("Executing version: {0}".format(EXECUTED_MODELS[model.name][version].executing_version),
-	    log=False)
-	log_file.write("{0}::{1}::{2}\n".format(name,
-						EXECUTED_MODELS[name][version].executing_version,
-						time))
+        time = datetime.now().timestamp()
+        EXECUTED_MODELS[name][version].addExecutingVersion(version_, time)
+        log("Executing version: {0}".format(EXECUTED_MODELS[model.name][version].executing_version),
+            log=False)
+        log_file.write("{0}::{1}::{2}\n".format(name,
+                                                EXECUTED_MODELS[name][version].executing_version,
+                                                time))
 
     
-def save_results_to_file(resultString, model):#model, result, train_result, dataloader, training_done, model_dir):
+def _save_results_to_file(resultString, model):#model, result, train_result, dataloader, training_done, model_dir):
     modified_dt = datetime.isoformat(datetime.fromtimestamp(EXECUTED_MODELS[model.name][mtime]))
     result_dt = datetime.now().isoformat()
   
-    #add_to_and_return_result_string("\n[{0}]:ml-pipline: output: \n".format(result_dt))
+    #_add_to_and_return_result_string("\n[{0}]:ml-pipline: output: \n".format(result_dt))
     with open(OUTPUT_FILE, 'a', encoding = "utf-8") as outfile:
-	outfile.write("\n[{0}]:ml-pipline: output: \n".format(result_dt))
-	outfile.write(resultString)
+        outfile.write("\n[{0}]:ml-pipline: output: \n".format(result_dt))
+        outfile.write(resultString)
     with open(HISTORY_FILE, 'a', encoding = "utf-8") as hist_file:
-	hist_file.write("{0}::{1}::{2}\n".format(model.name,
-						 EXECUTED_MODELS[model.name][mtime],
-						 EXECUTED_MODELS[model.name][version].executing_version))
+        hist_file.write("{0}::{1}::{2}\n".format(model.name,
+                                                 EXECUTED_MODELS[model.name][mtime],
+                                                 EXECUTED_MODELS[model.name][version].executing_version))
     
-  EXECUTED_MODELS[model.name][version].moveExecutingToExecuted()
+    EXECUTED_MODELS[model.name][version].moveExecutingToExecuted()
 
 
 def main(argv):
@@ -393,8 +317,6 @@ def main(argv):
     open(TRAINING_HISTORY_LOG_FILE, "a").close()
     open(LOG_FILE, "a").close()
 
-    #settingup logger
-    
     if argv.run:#any("r" in s for s in unused_argv) :
         TEST_MODE = False
     else:
@@ -439,23 +361,18 @@ def main(argv):
                             EXECUTED_MODELS[name][version].addExecutingVersion(v,t)
 
 
-    set_logger(test_mode = TEST_MODE, no_log = False)
+    if argv.no_log:
+        NO_LOG = True
+        
+    LOGGER = set_logger(test_mode = TEST_MODE, no_log = NO_LOG, log_file = LOG_FILE)
     add_script_dir_to_PATH(MODELS_DIR)
-    # if any("-b" in s for s in unused_argv):
-    #   if not os.path.isfile(HISTORY_FILE):
-    #     print("\033[1;31mWARNING: No 'blacklist' file in 'models' folder, No models blacklisted\033[0m")
-    #   else:
-    #     with open(HISTORY_FILE, 'r') as bl_file:
-    #       BLACKLISTED_MODELS = [line.rstrip("\n") for line in bl_file]    
-
-    # if not TEST_MODE:
-    #   logging.basicConfig(filename=LOG_FILE, format = '%(asctime)s ::%(levelname)s - %(message)s')
-    # else:
-    #   logging.basicConfig(format = '%(acstime)s ::%(levelname)s - %(message)s')
-    _main()
+    _main(file_path)
     
     
 if __name__ == "__main__":  
-  #print(parser.parse_args().r)
-  main(parser.parse_args())
+    #print(parser.parse_args().r)
+    #print(os.path.abspath("/home/amsha/Documents/Research/ml-pipeline/models"))
+    args = parser.parse_args()
+    print(args)
+    main(args)
   

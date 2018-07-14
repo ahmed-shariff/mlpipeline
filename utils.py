@@ -293,7 +293,7 @@ used to maintain model version information.
     self.executing_v_time=0.0
 
 
-def set_logger(test_mode = True, no_log = True):
+def set_logger(test_mode = True, no_log = True, log_file = None):
     global LOGGER
     formatter = logging.Formatter(fmt= "%(asctime)s:{0}{1}%(levelname)s:{2}%(name)s{3}- %(message)s" \
                                   .format(console_colors.BOLD,
@@ -311,7 +311,8 @@ def set_logger(test_mode = True, no_log = True):
     LOGGER.addHandler(handler)
     LOGGER.TEST_MODE = test_mode
     LOGGER.NO_LOG = no_log
-    LOGGER.LOG_FILE = LOG_FILE
+    LOGGER.LOG_FILE = log_file
+    return LOGGER
 
 def genName():
   return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5))
