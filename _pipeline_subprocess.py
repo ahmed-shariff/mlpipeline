@@ -1,10 +1,6 @@
 import os
-import sys
 import importlib.util
 import shutil
-import configparser
-import logging
-import string
 import socket
 import argparse
 from datetime import datetime
@@ -18,15 +14,9 @@ from utils import set_logger
 from utils import add_script_dir_to_PATH
 
 from global_values import MODELS_DIR
-from global_values import OUTPUT_FILE
-from global_values import HISTORY_FILE
-from global_values import TRAINING_HISTORY_LOG_FILE
-from global_values import LOG_FILE
 from global_values import NO_LOG
 from global_values import EXECUTED_MODELS
 from global_values import USE_BLACKLIST
-from global_values import LISTED_MODELS
-
 from global_values import TEST_MODE
 
 from global_values import mtime
