@@ -8,7 +8,6 @@ import re
 from inspect import getsourcefile
 from itertools import product
 from datetime import datetime
-import global_values as G
 
 LOGGER = None
 
@@ -93,40 +92,40 @@ Also prvodes helper functions to define and add new parameter versions.
     self.versions_defaults[version_parameters.DATALOADER] = dataloader
 
     if batch_size is None:
-      self.versions_defaults[version_parameters.BATCH_SIZE] = G.BATCH_SIZE
+      self.versions_defaults[version_parameters.BATCH_SIZE] = None
     else:
       self.versions_defaults[version_parameters.BATCH_SIZE] = batch_size
       
     if epoc_count is None:
-      self.versions_defaults[version_parameters.EPOC_COUNT] = G.EPOC_COUNT
+      self.versions_defaults[version_parameters.EPOC_COUNT] = None
     else:
       self.versions_defaults[version_parameters.EPOC_COUNT] = epoc_count
 
     if model_dir_suffix is None:
-      self.versions_defaults[version_parameters.MODEL_DIR_SUFFIX] = G.MODEL_DIR_SUFFIX
+      self.versions_defaults[version_parameters.MODEL_DIR_SUFFIX] = None
     else:
       self.versions_defaults[version_parameters.MODEL_DIR_SUFFIX] = model_dir_suffix
 
     self.versions_defaults[version_parameters.ORDER] = order
     #
     # if hooks is None:
-    #   self.versions_defaults[version_parameters.HOOKS] = G.HOOKS
+    #   self.versions_defaults[version_parameters.HOOKS] = NoneHOOKS
     # else:
     self.versions_defaults[version_parameters.HOOKS] = hooks
 
     #
     if use_all_classes is None:
-      self.versions_defaults[version_parameters.USE_ALL_CLASSES] = G.USE_ALL_CLASSES
+      self.versions_defaults[version_parameters.USE_ALL_CLASSES] = None
     else:
       self.versions_defaults[version_parameters.USE_ALL_CLASSES] = use_all_classes
 
     if classes_offset is None:
-      self.versions_defaults[version_parameters.CLASSES_OFFSET] = G.CLASSES_OFFSET
+      self.versions_defaults[version_parameters.CLASSES_OFFSET] = None
     else:
       self.versions_defaults[version_parameters.CLASSES_OFFSET] = classes_offset
 
     if classes_count is None:
-      self.versions_defaults[version_parameters.CLASSES_COUNT] = G.CLASSES_COUNT
+      self.versions_defaults[version_parameters.CLASSES_COUNT] = None
     else:
       self.versions_defaults[version_parameters.CLASSES_COUNT] = classes_count
 

@@ -1,8 +1,8 @@
-from utils import Versions
-from utils import ExecutionModeKeys
-from utils import ModeKeys
-from utils import log
-from utils import console_colors
+from mlp_utils import Versions
+from mlp_utils import ExecutionModeKeys
+from mlp_utils import ModeKeys
+from mlp_utils import log
+from mlp_utils import console_colors
 
 class Model():
   '''
