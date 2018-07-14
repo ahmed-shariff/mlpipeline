@@ -360,9 +360,11 @@ def main(argv):
                         if EXECUTED_MODELS[name][mtime] < t and EXECUTED_MODELS[name][version].executed(v) is not VersionLog.EXECUTED:
                             EXECUTED_MODELS[name][version].addExecutingVersion(v,t)
 
-
+                            
     if argv.no_log:
         NO_LOG = True
+    else:
+        NO_LOG = False
         
     LOGGER = set_logger(test_mode = TEST_MODE, no_log = NO_LOG, log_file = LOG_FILE)
     add_script_dir_to_PATH(MODELS_DIR)
