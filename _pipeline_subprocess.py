@@ -5,13 +5,13 @@ import socket
 import argparse
 from datetime import datetime
 
-from utils import ExecutionModeKeys
-from utils import version_parameters
-from utils import VersionLog
-from utils import console_colors
-from utils import log
-from utils import set_logger
-from utils import add_script_dir_to_PATH
+from mlp_utils import ExecutionModeKeys
+from mlp_utils import version_parameters
+from mlp_utils import VersionLog
+from mlp_utils import console_colors
+from mlp_utils import log
+from mlp_utils import set_logger
+from mlp_utils import add_script_dir_to_PATH
 
 from global_values import MODELS_DIR
 from global_values import NO_LOG

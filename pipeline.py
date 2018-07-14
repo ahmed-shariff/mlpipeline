@@ -1,17 +1,25 @@
 import os
+import sys
+
+# why not check for this
+if sys.version_info < (3,5):
+    sys.stderr.write("ERROR: python version should be greater than or equal 3.5\n")
+    sys.exit(1)
+
+import subprocess
 import shutil
 import configparser
 import socket
 import argparse
 
-from utils import log
-from utils import set_logger
+from mlp_utils import log
+from mlp_utils import set_logger
 
 from global_values import MODELS_DIR
 from global_values import TEST_MODE
 from global_values import NO_LOG
 from global_values import USE_BLACKLIST
-#tf.logging.set_verbosity(tf.logging.INFO)
+
 parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
 parser.add_argument('-r','--run', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true')
 parser.add_argument('-u','--use-history', help='If set will use the history log to determine if a model script has been executed.', action = 'store_true')
@@ -22,13 +30,20 @@ def _main():
     current_model_name = _get_model()
     while current_model_name is not None:
         #exec subprocess
-        print("current_model_name ------------------")
+        args = ["python3", "_pipeline_subprocess.py", current_model_name, MODELS_DIR]
+        if NO_LOG:
+            args.append("-n")
+        if not TEST_MODE:
+            args.append("-r")
+        if USE_HISTORY:
+            args.append("-u")
+        output = subprocess.call(args, universal_newlines = True)
         if TEST_MODE:
             break
         current_model_name  = _get_model()
 
 def _get_model(just_return_model=False):
-    config_update()
+    _config_update()
     for rdir, dirs, files in os.walk(MODELS_DIR):
         for f in files:
             if f.endswith(".py"):
@@ -41,7 +56,7 @@ def _get_model(just_return_model=False):
               return file_path
     return None
 
-def config_update():
+def _config_update():
     if TEST_MODE:
         config_from = "models_test.config"
     else:
@@ -111,7 +126,7 @@ def main(argv):
         else:
             USE_HISTORY = False
 
-    config_update()
+    _config_update()
     LOGGER = set_logger(test_mode = TEST_MODE, no_log = NO_LOG, log_file = log_file)
     log("=====================ML-Pipeline session started")
     _main()
@@ -120,6 +135,10 @@ def main(argv):
 
     
 if __name__ == "__main__":  
-  #print(parser.parse_args().r)
-  main(parser.parse_args())
-  
+    #print(parser.parse_args().r)
+    # output = subprocess.run(["python3", "--version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines = True)
+    # if int(output.stdout.replace("Python ", "").split(".")[1]) < 5:
+    #     print("ERROR: Requires python 3.5 or greater")
+    #     sys.exit(1)
+    main(parser.parse_args())
+    

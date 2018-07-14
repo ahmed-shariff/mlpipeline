@@ -4,11 +4,14 @@ import itertools
 import os
 from inspect import getsourcefile
 
-from utils import add_script_dir_to_PATH
-from utils import ExecutionModeKeys
-from utils import Versions
-from helper import Model
-from helper import DataLoader
+import sys
+print(sys.path)
+
+from mlp_utils import add_script_dir_to_PATH
+from mlp_utils import ExecutionModeKeys
+from mlp_utils import Versions
+from mlp_helper import Model
+from mlp_helper import DataLoader
 
 #This section is sepcially needed if the model scripts are not in the same directory from which the pipline is being executed
 #add_script_dir_to_PATH(os.path.abspath(os.path.dirname(getsourcefile(lambda:0))))
