@@ -19,3 +19,4 @@
 - [ ] Is there a separate need for MODEL_DIR_SUFFIX?
 - [ ] Rethink allow_delete_model_dir
 - [ ] Rethink how the training time is recorded to ensure a model that ended up failing to train can be relaunched. Or is this even an good behaviour to have?
+- [ ] Let the user override the checking-modified-time behaviour

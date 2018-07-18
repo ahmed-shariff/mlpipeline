@@ -19,3 +19,33 @@ Almost always you'd have to run the same model with different hyper-parameters. 
 * `mlp_utils.version_parameters.EPOC_COUNT`: The number of epocs that will be used. As of the current version of the pipeline, this parameter is mandatory.
 * `mlp_utils.version_parameters.ORDER`: This is set to ensure the versions are loaded in the order they are defined. This value can be passed to a version to override this behaviour.
 
+### Executing models
+You can have any number of models in the `models` folder. Add the names of the scripts to the `models.config` file. If the `use_blacklist` is false, only the scripts whose names are under `[WHITELISTED_MODELS]` will be executed. if it is set to true all scripts except the ones under the `[BLACKLISTED_MODELS]` will be executed. Note that models can be added or removed (assuming it has not been executed) to the execution queue while the pipeline is running. That is after each model is executed, the pipeline will re-load the config file.
+
+You can execute the pipeline by running the python script:
+
+``` bash
+python pipeline.py
+```
+
+#### Outputs
+The outputs and logs will be saved in files in a folder named `outputs` in the `models` folder. There are two files the user would want to keep track of (note that the \<hostname\> is the host name of the system on which the pipeline is being executed):
+- `log-<hostname>`: This file contains the logs
+- `output-<hostname>`: This file contains the output results of each "incarnation" of a model.
+
+Note that the other files are used by the pipeline to keep track of training sessions previously launched.
+
+#### The two modes
+The pipeline can be executed in two modes: **test mode** and **execution mode**. When you are developing a model, you'd want to use the test mode. The pipeline when executed without any additional arguments will be executed in the test mode. Note that the test mode uses it's own config file `models_test.config`, that functions similar to the `models.config` file. To execute in execution mode, pass `-r` to the above command:
+
+``` bash
+python pipeline.py -r
+```
+Differences between test mode and execution mode:
+
+Test mode | Execution mode
+----------|---------------
+Uses `models_test.config` | Uses `models.config`
+The model directory is a temporary directory which will be cleared each time the model is executed | The model directory is a directory defined by the name of the model and versions `MODEL_DIR_SUFFIX`
+If an exception is raised, the pipeline will halt is execution by raising the exception to the top level | Any exception raised will not stop the pipeline, the error will be logged and the pipeline will continue process with other versions and models
+No results or logs will be recorded in the output files | All logs and outputs will be recorded in the output files
