@@ -13,9 +13,12 @@ from mlp_utils import Versions
 from mlp_helper import Model
 from mlp_helper import DataLoader
 
-#This section is sepcially needed if the model scripts are not in the same directory from which the pipline is being executed
-#add_script_dir_to_PATH(os.path.abspath(os.path.dirname(getsourcefile(lambda:0))))
+class An_ML_Model():
+  def __init__(self, hyperparameter="default value"):
+    self.hyperparameter = hyperparameter
 
+  def train(self):
+    return "Trained using {}".format(hyperparameter)
 
 class TestingDataLoader(DataLoader):
   def __init__(self):
@@ -37,10 +40,13 @@ class TestingDataLoader(DataLoader):
 class TestingModel(Model):
   def __init__(self, versions, **args):
     super().__init__(versions, **args)
+    self.model = An_ML_Model()
+    
 
   def pre_execution_hook(self, version, model_dir, exec_mode=ExecutionModeKeys.TEST):
     self.log("Pre execution")
-    self.log("Version spec: ", version)
+    self.log("Version spec: {}".format(version))
+    self.model.hyperparameter = version["hyperparameter"]
     self.current_version = version
 
   def get_current_version(self):
@@ -53,6 +59,7 @@ class TestingModel(Model):
     self.log("steps: ", steps)
     self.log("calling input fn")
     input_fn()
+    self.log("trained: {}".format(self.model.train()))
 
   def evaluate_model(self, input_fn, steps):
     self.log("steps: ", steps)
@@ -61,6 +68,6 @@ class TestingModel(Model):
 
 dl = TestingDataLoader()
 v = Versions(0.01, dl)
-v.addV("version1")
+v.addV("version1", custom_paramters = {"hyperparameter": "a hyperparameter"})
 v.addV("version2")
 MODEL = TestingModel(versions = v)
