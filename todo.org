@@ -6,10 +6,16 @@
 - Online and offline pipelines? The current system is designed for offline training. 
 - How can the deployment process be automated using the pipeline?
 - Better version control for the models and data/metadata.
-- Commit following each train and eval loop.
 - Group a set of files as a experiment.
-- Add a function that will be executed at the end of the loop, where I can add stuff like moving files, etc.
 - Allow the model scripts to infer if the pipeline is in TEST or TRAIN mode.
 - How can I handle situations where I want to relaunch the same experiment? use multiple versions with different names?
 - The classification steps passed to the training component, what if the steps calculated that way is too confusing? like I only want the number of epocs be passed?
 - clean a easier logging.
+
+
+- [X] Add a function that will be executed at the end of the loop, where I can add stuff like moving files, etc.
+- [ ] Commit following each train and eval loop.
+- [ ] Reduce the dependencies on Versions.
+- [ ] Is there a separate need for MODEL_DIR_SUFFIX?
+- [ ] Rethink allow_delete_model_dir
+- [ ] Rethink how the training time is recorded to ensure a model that ended up failing to train can be relaunched. Or is this even an good behaviour to have?
