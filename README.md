@@ -73,3 +73,6 @@ Uses `models_test.config` | Uses `models.config`
 The model directory is a temporary directory which will be cleared each time the model is executed | The model directory is a directory defined by the name of the model and versions `MODEL_DIR_SUFFIX`
 If an exception is raised, the pipeline will halt is execution by raising the exception to the top level | Any exception raised will not stop the pipeline, the error will be logged and the pipeline will continue process with other versions and models
 No results or logs will be recorded in the output files | All logs and outputs will be recorded in the output files
+
+## Extra
+I use an experiment log to maintain the experiments, which kinda ties into how I use the pipeline. For more info on that: https://ahmed-shariff.github.io/2018/06/11/Experiment-log/
