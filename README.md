@@ -76,3 +76,8 @@ No results or logs will be recorded in the output files | All logs and outputs w
 
 ## Extra
 I use an experiment log to maintain the experiments, which kinda ties into how I use the pipeline. For more info on that: https://ahmed-shariff.github.io/2018/06/11/Experiment-log/
+
+Other projects that address similar problems (I'd be trying to combine them in the future iterations of the pipeline):
+- DVC: https://github.com/iterative/dvc
+- sacred: https://github.com/IDSIA/sacred
+- MLflow: https://github.com/databricks/mlflow
