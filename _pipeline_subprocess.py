@@ -61,6 +61,8 @@ def _main(file_path):
     batch_size = version_spec[version_parameters.BATCH_SIZE]
     model_dir_suffix = version_spec[version_parameters.MODEL_DIR_SUFFIX]
     dataloader = version_spec[version_parameters.DATALOADER]
+
+    log("Version_spec: {}".format(version_spec))
     
     if TEST_MODE:
         record_training = False
@@ -133,6 +135,7 @@ def _main(file_path):
     _add_to_and_return_result_string("-------------------------------------------")
     _add_to_and_return_result_string("EXECUTION SUMMERY:")
     _add_to_and_return_result_string("Number of epocs: {0}".format(version_spec[version_parameters.EPOC_COUNT]))
+    _add_to_and_return_result_string("Parameters for this version: {0}".format(version_spec))
     _add_to_and_return_result_string("-------------------------------------------")
     _add_to_and_return_result_string("MODEL SUMMERY:")
     _add_to_and_return_result_string(current_model.summery)
