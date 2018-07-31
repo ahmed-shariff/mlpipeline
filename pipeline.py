@@ -27,6 +27,7 @@ parser.add_argument('-n','--no_log', help='If set non of the logs will be append
 
 
 def _main():
+    completeed_models = []
     current_model_name = _get_model()
     while current_model_name is not None:
         #exec subprocess
@@ -38,16 +39,20 @@ def _main():
         if USE_HISTORY:
             args.append("-u")
         output = subprocess.call(args, universal_newlines = True)
+        if output == 3:
+            completeed_models.append(current_model_name)
         if TEST_MODE:
             break
-        current_model_name  = _get_model()
+        current_model_name  = _get_model(completeed_models)
 
-def _get_model():
+def _get_model(completeed_models = None):
     _config_update()
     for rdir, dirs, files in os.walk(MODELS_DIR):
         for f in files:
             if f.endswith(".py"):
               file_path = os.path.join(rdir,f)
+              if completeed_models is not None and file_path in completeed_models:
+                  continue
               # TODO: Should remove this check, prolly has no use!
               if USE_BLACKLIST and file_path in LISTED_MODELS:
                   continue
