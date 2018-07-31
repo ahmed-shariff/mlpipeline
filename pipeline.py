@@ -42,7 +42,7 @@ def _main():
             break
         current_model_name  = _get_model()
 
-def _get_model(just_return_model=False):
+def _get_model():
     _config_update()
     for rdir, dirs, files in os.walk(MODELS_DIR):
         for f in files:
@@ -113,7 +113,14 @@ def main(argv):
     hostName = socket.gethostname()
     MODELS_DIR_OUTPUTS = MODELS_DIR + "/outputs"
     log_file = MODELS_DIR_OUTPUTS + "/log-{0}".format(hostName)
-    open(log_file, "a").close()
+    try:
+      open(log_file, "a").close()
+    except FileNotFoundError:
+      if os.path.isdir(MODELS_DIR_OUTPUTS):
+        os.makedirs(MODELS_DIR_OUTPUTS)
+        open(log_file, "a").close()
+      else:
+        raise
 
     if argv is not None:#len(unused_argv)> 0:
         if argv.run:#any("r" in s for s in unused_argv) :
