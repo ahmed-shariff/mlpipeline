@@ -33,6 +33,8 @@ parser.add_argument('-n','--no_log', help='If set non of the logs will be append
 
 def _main(file_path):
     current_model, version_name, clean_model_dir = _get_model(file_path)
+    if current_model is None:
+        return
     _add_to_and_return_result_string("Model: {0}".format(current_model.name), True)
     _add_to_and_return_result_string("Version: {0}".format(version_name))
     log("Model loaded: {0}".format(current_model.name))
