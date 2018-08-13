@@ -39,7 +39,7 @@ def _main():
         if USE_HISTORY:
             args.append("-u")
         output = subprocess.call(args, universal_newlines = True)
-        if output == 3:
+        if output == 3 or output == 1:
             completeed_models.append(current_model_name)
         if TEST_MODE:
             break

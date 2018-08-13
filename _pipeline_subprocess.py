@@ -4,6 +4,7 @@ import importlib.util
 import shutil
 import socket
 import argparse
+import logging
 from datetime import datetime
 
 from mlp_utils import ExecutionModeKeys
@@ -125,29 +126,31 @@ def _main(file_path):
                 raise
 	
         log("Model evaluation complete")
+        log("Eval on train set: {0}".format(train_results))
+        log("Eval on test set:  {0}".format(eval_results))
+        _add_to_and_return_result_string("Eval on train set: {0}".format(train_results))
+        _add_to_and_return_result_string("Eval on test  set: {0}".format(eval_results))
+        _add_to_and_return_result_string("-------------------------------------------")
+        _add_to_and_return_result_string("EXECUTION SUMMERY:")
+        _add_to_and_return_result_string("Number of epocs: {0}".format(version_spec[version_parameters.EPOC_COUNT]))
+        _add_to_and_return_result_string("Parameters for this version: {0}".format(version_spec))
+        _add_to_and_return_result_string("-------------------------------------------")
+        _add_to_and_return_result_string("MODEL SUMMERY:")
+        _add_to_and_return_result_string(current_model.summery)
+        _add_to_and_return_result_string("-------------------------------------------")
+        _add_to_and_return_result_string("DATALOADER	 SUMMERY:")
+        _add_to_and_return_result_string(dataloader.summery)
+        if record_training and not NO_LOG:
+            _save_results_to_file(_add_to_and_return_result_string(), current_model)
+
     except Exception as e:
         if TEST_MODE is True:
             raise
         else:
             log("Exception: {0}".format(str(e)), logging.ERROR)
+            sys.exit(1)
 
-    log("Eval on train set: {0}".format(train_results))
-    log("Eval on test set:  {0}".format(eval_results))
-    _add_to_and_return_result_string("Eval on train set: {0}".format(train_results))
-    _add_to_and_return_result_string("Eval on test  set: {0}".format(eval_results))
-    _add_to_and_return_result_string("-------------------------------------------")
-    _add_to_and_return_result_string("EXECUTION SUMMERY:")
-    _add_to_and_return_result_string("Number of epocs: {0}".format(version_spec[version_parameters.EPOC_COUNT]))
-    _add_to_and_return_result_string("Parameters for this version: {0}".format(version_spec))
-    _add_to_and_return_result_string("-------------------------------------------")
-    _add_to_and_return_result_string("MODEL SUMMERY:")
-    _add_to_and_return_result_string(current_model.summery)
-    _add_to_and_return_result_string("-------------------------------------------")
-    _add_to_and_return_result_string("DATALOADER	 SUMMERY:")
-    _add_to_and_return_result_string(dataloader.summery)
-    if record_training and not NO_LOG:
-        _save_results_to_file(_add_to_and_return_result_string(), current_model)
-
+    
 def _get_training_steps(mode, model, clean_model_dir):
     if TEST_MODE:
         return 1
