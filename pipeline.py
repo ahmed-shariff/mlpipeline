@@ -45,20 +45,33 @@ def _main():
             break
         current_model_name  = _get_model(completeed_models)
 
-def _get_model(completeed_models = None):
+def _get_model(completeed_models = []):
     _config_update()
     for rdir, dirs, files in os.walk(MODELS_DIR):
         for f in files:
             if f.endswith(".py"):
-              file_path = os.path.join(rdir,f)
-              if completeed_models is not None and file_path in completeed_models:
-                  continue
-              # TODO: Should remove this check, prolly has no use!
-              if USE_BLACKLIST and file_path in LISTED_MODELS:
-                  continue
-              if not USE_BLACKLIST and file_path not in LISTED_MODELS:
-                  continue
-              return file_path
+                file_path = os.path.join(rdir,f)
+                if completeed_models is not None and file_path in completeed_models:
+                    continue
+                # TODO: Should remove this check, prolly has no use!
+                if USE_BLACKLIST and file_path in LISTED_MODELS:
+                    continue
+                if not USE_BLACKLIST and file_path not in LISTED_MODELS:
+                    continue
+                skip_model_for_now = False
+
+                # Ensure the files loaded are in the order they are
+                # specified in the config file
+                for listed_model_file in LISTED_MODELS:
+                    if listed_model_file != file_path:
+                        if listed_model_file not in completeed_models:
+                            skip_model_for_now = True
+                            break
+                    else:
+                        break
+                if skip_model_for_now:
+                    continue
+                return file_path
     return None
 
 def _config_update():
