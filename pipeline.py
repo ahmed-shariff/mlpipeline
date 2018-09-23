@@ -11,6 +11,7 @@ import shutil
 import configparser
 import socket
 import argparse
+import logging
 
 from mlp_utils import log
 from mlp_utils import set_logger
@@ -91,7 +92,7 @@ def _config_update():
         try:
             config["MLP"]
         except KeyError:
-            log("\033[1;031mWARNING:\033[0:031mNo MLP section in 'models.config' file\033[0m", log_to_file = True)
+            log("\033[1;031mWARNING:\033[0:031mNo MLP section in 'models.config' file\033[0m", log_to_file = True, level = logging.WARNING)
         USE_BLACKLIST =  config.getboolean("MLP", "use_blacklist", fallback=USE_BLACKLIST)
         try:
             if USE_BLACKLIST:
@@ -101,13 +102,18 @@ def _config_update():
             l = []
             for model in LISTED_MODELS:
                 l.append(os.path.join(MODELS_DIR, model))
+
+            for model in l:
+                if not os.path.exists(model):
+                    l.remove(model)
+                    log("Script missing: {}".format(model), level = logging.WARNING)
             LISTED_MODELS = l
             log("\033[1;036m{0}\033[0;036m: {1}\033[0m".format(
                 ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0].replace("_"," "),
                 LISTED_MODELS).lower(), log_to_file = True)
         except KeyError:
             log("\033[1;031mWARNING:\033[0:031mNo {0} section in 'cnn.config' file\033[0m".format(
-                ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0]), log_to_file = True)
+                ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0]), log_to_file = True, level = logging.ERROR)
 
 
 def main(argv):
