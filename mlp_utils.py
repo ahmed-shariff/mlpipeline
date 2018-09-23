@@ -316,7 +316,7 @@ def set_logger(test_mode = True, no_log = True, log_file = None):
 def genName():
   return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5))
 
-def log(message, level = logging.INFO, log=True, modifier_1=None, modifier_2=None):
+def log(message, level = logging.INFO, log_to_file=True, modifier_1=None, modifier_2=None):
   # if level is not logging.INFO and level is not logging.ERROR:
   #   raise AttributeError("level cannot be other than logging.INFO or logging.ERROR, coz i am lazy to get others in here")
   if modifier_1 is None and modifier_2 is None:

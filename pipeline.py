@@ -86,12 +86,12 @@ def _config_update():
     global LISTED_MODELS
   
     if len(config_file)==0:
-        print("\033[1;031mWARNING:\033[0:031mNo 'models.config' file found\033[0m")
+        log("\033[1;031mWARNING:\033[0:031mNo 'models.config' file found\033[0m", log_to_file = True)
     else:
         try:
             config["MLP"]
         except KeyError:
-            print("\033[1;031mWARNING:\033[0:031mNo MLP section in 'models.config' file\033[0m")
+            log("\033[1;031mWARNING:\033[0:031mNo MLP section in 'models.config' file\033[0m", log_to_file = True)
         USE_BLACKLIST =  config.getboolean("MLP", "use_blacklist", fallback=USE_BLACKLIST)
         try:
             if USE_BLACKLIST:
@@ -102,12 +102,12 @@ def _config_update():
             for model in LISTED_MODELS:
                 l.append(os.path.join(MODELS_DIR, model))
             LISTED_MODELS = l
-            print("\033[1;036m{0}\033[0;036m: {1}\033[0m".format(
+            log("\033[1;036m{0}\033[0;036m: {1}\033[0m".format(
                 ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0].replace("_"," "),
-                LISTED_MODELS).lower())
+                LISTED_MODELS).lower(), log_to_file = True)
         except KeyError:
-            print("\033[1;031mWARNING:\033[0:031mNo {0} section in 'cnn.config' file\033[0m".format(
-                ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0]))
+            log("\033[1;031mWARNING:\033[0:031mNo {0} section in 'cnn.config' file\033[0m".format(
+                ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0]), log_to_file = True)
 
 
 def main(argv):
@@ -151,8 +151,8 @@ def main(argv):
         else:
             USE_HISTORY = False
 
-    _config_update()
     LOGGER = set_logger(test_mode = TEST_MODE, no_log = NO_LOG, log_file = log_file)
+    #_config_update()
     log("=====================ML-Pipeline session started")
     _main()
     log("=====================ML-Pipeline Session ended")
@@ -160,10 +160,5 @@ def main(argv):
 
     
 if __name__ == "__main__":  
-    #print(parser.parse_args().r)
-    # output = subprocess.run(["python3", "--version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines = True)
-    # if int(output.stdout.replace("Python ", "").split(".")[1]) < 5:
-    #     print("ERROR: Requires python 3.5 or greater")
-    #     sys.exit(1)
     main(parser.parse_args())
     

@@ -243,7 +243,7 @@ def _get_model(file_path, just_return_model=False):
                 returning_version = v
                 clean_model_dir = True
     log("Executed versions: {0}".format(EXECUTED_MODELS[model.name][version].executed_versions),
-        log=False)
+        log_to_file=False)
     if returning_version is None:
         return None, None, False
     return model, returning_version, clean_model_dir
@@ -268,7 +268,7 @@ def _save_training_time(model, version_):
         time = datetime.now().timestamp()
         EXECUTED_MODELS[name][version].addExecutingVersion(version_, time)
         log("Executing version: {0}".format(EXECUTED_MODELS[model.name][version].executing_version),
-            log=False)
+            log_to_file=False)
         log_file.write("{0}::{1}::{2}\n".format(name,
                                                 EXECUTED_MODELS[name][version].executing_version,
                                                 time))
