@@ -5,13 +5,13 @@ import socket
 import argparse
 from datetime import datetime
 
-from mlp_utils import ExecutionModeKeys
-from mlp_utils import version_parameters
-from mlp_utils import VersionLog
-from mlp_utils import console_colors
-from mlp_utils import log
-from mlp_utils import set_logger
-from mlp_utils import add_script_dir_to_PATH
+from mlpipeline.utils import ExecutionModeKeys
+from mlpipeline.utils import version_parameters
+from mlpipeline.utils import VersionLog
+from mlpipeline.utils import console_colors
+from mlpipeline.utils import log
+from mlpipeline.utils import set_logger
+from mlpipeline.utils import add_script_dir_to_PATH
 
 from global_values import MODELS_DIR
 from global_values import NO_LOG

@@ -12,8 +12,8 @@ import configparser
 import socket
 import argparse
 
-from mlp_utils import log
-from mlp_utils import set_logger
+from mlpipeline.utils import log
+from mlpipeline.utils import set_logger
 
 from global_values import MODELS_DIR
 from global_values import TEST_MODE

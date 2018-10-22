@@ -8,7 +8,6 @@ import re
 from inspect import getsourcefile
 from itertools import product
 from datetime import datetime
-
 LOGGER = None
 
 class ModeKeys():
@@ -228,7 +227,7 @@ The combinations by the above call would be:
 
     products = [parameters[parameter] if isinstance(parameters[parameter], list) else [parameters[parameter]] for paramter in combining_parameters]
     if names is None:
-      names = [genName() for _ in products]
+      names = [_genName() for _ in products]
     elif len(products) != len(names):
       raise ValueError("length of names shoul be {0}, to match the number of products generated".format(len(products)))
     for idx, combination in enumerate(product(*products)):
@@ -313,7 +312,7 @@ def set_logger(test_mode = True, no_log = True, log_file = None):
     LOGGER.LOG_FILE = log_file
     return LOGGER
 
-def genName():
+def _genName():
   return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5))
 
 def log(message, level = logging.INFO, log=True, modifier_1=None, modifier_2=None):
