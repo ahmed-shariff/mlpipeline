@@ -74,9 +74,13 @@ If an exception is raised, the pipeline will halt is execution by raising the ex
 No results or logs will be recorded in the output files | All logs and outputs will be recorded in the output files
 
 ## Extra
-I use an experiment log to maintain the experiments, which kinda ties into how I use the pipeline. For more info on that: https://ahmed-shariff.github.io/2018/06/11/Experiment-log/
+I use an experiment log to maintain the experiments, which kinda ties into how I use the pipeline. For more info on that: [Experiment log - How I keep track of my ML experiments](https://ahmed-shariff.github.io/2018/06/11/Experiment-log/)
+
+The practices I have grown to follow are described in this post: [Practices I follow with the machine learning pipeline](https://ahmed-shariff.github.io/2018/08/01/mlp_file_structure)
 
 Other projects that address similar problems (I'd be trying to combine them in the future iterations of the pipeline):
-- DVC: https://github.com/iterative/dvc
-- sacred: https://github.com/IDSIA/sacred
-- MLflow: https://github.com/databricks/mlflow
+- [DVC](https://github.com/iterative/dvc)
+- [sacred](https://github.com/IDSIA/sacred)
+- [MLflow](https://github.com/databricks/mlflow)
+
+
