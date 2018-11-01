@@ -26,13 +26,6 @@ from mlpipeline.global_values import version
 from mlpipeline.global_values import train_time
 from mlpipeline.global_values import vless
 
-parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
-parser.add_argument("file_path", help='The file path of the model to be executed')
-parser.add_argument("models_dir", help='The directory in which the models reside, also where the results are to stored')
-parser.add_argument('-r','--run', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true')
-parser.add_argument('-u','--use-history', help='If set will use the history log to determine if a model script has been executed.', action = 'store_true')
-parser.add_argument('-n','--no_log', help='If set non of the logs will be appended to the log files.', action = 'store_true')
-
 def _main(file_path):
     current_model, version_name, clean_model_dir = _get_model(file_path)
     if current_model is None:
@@ -290,7 +283,15 @@ def _save_results_to_file(resultString, model):#model, result, train_result, dat
     EXECUTED_MODELS[model.name][version].moveExecutingToExecuted()
 
 
-def main(argv):
+def main():
+    parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
+    parser.add_argument("file_path", help='The file path of the model to be executed')
+    parser.add_argument("models_dir", help='The directory in which the models reside, also where the results are to stored')
+    parser.add_argument('-r','--run', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true')
+    parser.add_argument('-u','--use-history', help='If set will use the history log to determine if a model script has been executed.', action = 'store_true')
+    parser.add_argument('-n','--no_log', help='If set non of the logs will be appended to the log files.', action = 'store_true')
+    argv = parser.parse_args()
+    
     global TEST_MODE
     global NO_LOG
     global LOGGER
@@ -369,6 +370,5 @@ def main(argv):
     
     
 if __name__ == "__main__":  
-    args = parser.parse_args()
-    main(args)
+    main()
   

@@ -10,10 +10,12 @@ setuptools.setup(
     description='A framework to define a machine learning pipeline',
     long_description=open('README.md').read(),
     url='https://github.com/ahmed-shariff/ml-pipeline',
-    entry_points='''
-        [console_scripts]
-        mlpipeline=mlpipeline.pipeline:main
-    ''',
+    entry_points={
+        'console_scripts':[
+            'mlpipeline=mlpipeline.pipeline:main',
+            '_mlpipeline_subprocess=mlpipeline._pipeline_subprocess:main'
+            ]
+        },
     classifiers=[
         "Programming Language :: Python :: 3"]
 )

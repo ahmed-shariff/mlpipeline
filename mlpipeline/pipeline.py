@@ -25,10 +25,9 @@ USE_HISTORY = False
 def _main():
     completeed_models = []
     current_model_name = _get_model()
-    print(USE_HISTORY, 123)
     while current_model_name is not None:
         #exec subprocess
-        args = ["python3", "_pipeline_subprocess.py", current_model_name, MODELS_DIR]
+        args = ["_mlpipeline_subprocess", current_model_name, MODELS_DIR]
         if NO_LOG:
             args.append("-n")
         if not TEST_MODE:

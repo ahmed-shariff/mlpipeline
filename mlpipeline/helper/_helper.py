@@ -1,8 +1,8 @@
-from mlp_utils import Versions
-from mlp_utils import ExecutionModeKeys
-from mlp_utils import ModeKeys
-from mlp_utils import log
-from mlp_utils import console_colors
+from mlpipeline.utils import Versions
+from mlpipeline.utils import ExecutionModeKeys
+from mlpipeline.utils import ModeKeys
+from mlpipeline.utils import log
+from mlpipeline.utils import console_colors
 
 class Model():
   '''
