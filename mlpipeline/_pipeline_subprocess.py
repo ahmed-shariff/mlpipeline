@@ -1,8 +1,10 @@
 import os
+import sys
 import importlib.util
 import shutil
 import socket
 import argparse
+import logging
 from datetime import datetime
 
 from mlpipeline.utils import ExecutionModeKeys
@@ -33,6 +35,8 @@ parser.add_argument('-n','--no_log', help='If set non of the logs will be append
 
 def _main(file_path):
     current_model, version_name, clean_model_dir = _get_model(file_path)
+    if current_model is None:
+        sys.exit(3)
     _add_to_and_return_result_string("Model: {0}".format(current_model.name), True)
     _add_to_and_return_result_string("Version: {0}".format(version_name))
     log("Model loaded: {0}".format(current_model.name))
@@ -122,29 +126,31 @@ def _main(file_path):
                 raise
 	
         log("Model evaluation complete")
+        log("Eval on train set: {0}".format(train_results))
+        log("Eval on test set:  {0}".format(eval_results))
+        _add_to_and_return_result_string("Eval on train set: {0}".format(train_results))
+        _add_to_and_return_result_string("Eval on test  set: {0}".format(eval_results))
+        _add_to_and_return_result_string("-------------------------------------------")
+        _add_to_and_return_result_string("EXECUTION SUMMERY:")
+        _add_to_and_return_result_string("Number of epocs: {0}".format(version_spec[version_parameters.EPOC_COUNT]))
+        _add_to_and_return_result_string("Parameters for this version: {0}".format(version_spec))
+        _add_to_and_return_result_string("-------------------------------------------")
+        _add_to_and_return_result_string("MODEL SUMMERY:")
+        _add_to_and_return_result_string(current_model.summery)
+        _add_to_and_return_result_string("-------------------------------------------")
+        _add_to_and_return_result_string("DATALOADER	 SUMMERY:")
+        _add_to_and_return_result_string(dataloader.summery)
+        if record_training and not NO_LOG:
+            _save_results_to_file(_add_to_and_return_result_string(), current_model)
+
     except Exception as e:
         if TEST_MODE is True:
             raise
         else:
             log("Exception: {0}".format(str(e)), logging.ERROR)
+            sys.exit(1)
 
-    log("Eval on train set: {0}".format(train_results))
-    log("Eval on test set:  {0}".format(eval_results))
-    _add_to_and_return_result_string("Eval on train set: {0}".format(train_results))
-    _add_to_and_return_result_string("Eval on test  set: {0}".format(eval_results))
-    _add_to_and_return_result_string("-------------------------------------------")
-    _add_to_and_return_result_string("EXECUTION SUMMERY:")
-    _add_to_and_return_result_string("Number of epocs: {0}".format(version_spec[version_parameters.EPOC_COUNT]))
-    _add_to_and_return_result_string("Parameters for this version: {0}".format(version_spec))
-    _add_to_and_return_result_string("-------------------------------------------")
-    _add_to_and_return_result_string("MODEL SUMMERY:")
-    _add_to_and_return_result_string(current_model.summery)
-    _add_to_and_return_result_string("-------------------------------------------")
-    _add_to_and_return_result_string("DATALOADER	 SUMMERY:")
-    _add_to_and_return_result_string(dataloader.summery)
-    if record_training and not NO_LOG:
-        _save_results_to_file(_add_to_and_return_result_string(), current_model)
-
+    
 def _get_training_steps(mode, model, clean_model_dir):
     if TEST_MODE:
         return 1
@@ -237,7 +243,7 @@ def _get_model(file_path, just_return_model=False):
                 returning_version = v
                 clean_model_dir = True
     log("Executed versions: {0}".format(EXECUTED_MODELS[model.name][version].executed_versions),
-        log=False)
+        log_to_file=False)
     if returning_version is None:
         return None, None, False
     return model, returning_version, clean_model_dir
@@ -262,7 +268,7 @@ def _save_training_time(model, version_):
         time = datetime.now().timestamp()
         EXECUTED_MODELS[name][version].addExecutingVersion(version_, time)
         log("Executing version: {0}".format(EXECUTED_MODELS[model.name][version].executing_version),
-            log=False)
+            log_to_file=False)
         log_file.write("{0}::{1}::{2}\n".format(name,
                                                 EXECUTED_MODELS[name][version].executing_version,
                                                 time))
@@ -363,9 +369,6 @@ def main(argv):
     
     
 if __name__ == "__main__":  
-    #print(parser.parse_args().r)
-    #print(os.path.abspath("/home/amsha/Documents/Research/ml-pipeline/models"))
     args = parser.parse_args()
-    print(args)
     main(args)
   

@@ -78,7 +78,7 @@ try to include the relevent information you would want to refer to when assessin
     log("{}Model- {}{}".format(console_colors.CYAN_FG,
                                console_colors.RESET,
                                message),
-        log=log_to_file, **kargs)
+        log_to_file=log_to_file, **kargs)
 
 
 
@@ -137,6 +137,6 @@ This function can be used to set the summery of the dataloader, which will be ad
     log("{}Model- {}{}".format(console_colors.CYAN_FG,
                                console_colors.RESET,
                                message),
-        log=log_to_file, **kargs)
+        log_to_file=log_to_file, **kargs)
 
     

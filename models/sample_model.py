@@ -18,7 +18,7 @@ class An_ML_Model():
     self.hyperparameter = hyperparameter
 
   def train(self):
-    return "Trained using {}".format(hyperparameter)
+    return "Trained using {}".format(self.hyperparameter)
 
 class TestingDataLoader(DataLoader):
   def __init__(self):
@@ -67,7 +67,7 @@ class TestingModel(Model):
     input_fn()
 
 dl = TestingDataLoader()
-v = Versions(0.01, dl)
+v = Versions(0.01, dl, 1, 1)
 v.addV("version1", custom_paramters = {"hyperparameter": "a hyperparameter"})
-v.addV("version2")
+v.addV("version2", custom_paramters = {"hyperparameter": None})
 MODEL = TestingModel(versions = v)

@@ -11,6 +11,7 @@ import shutil
 import configparser
 import socket
 import argparse
+import logging
 
 from mlpipeline.utils import log
 from mlpipeline.utils import set_logger
@@ -22,6 +23,7 @@ from mlpipeline.global_values import USE_BLACKLIST
 USE_HISTORY = False
 
 def _main():
+    completeed_models = []
     current_model_name = _get_model()
     print(USE_HISTORY, 123)
     while current_model_name is not None:
@@ -34,22 +36,39 @@ def _main():
         if USE_HISTORY:
             args.append("-u")
         output = subprocess.call(args, universal_newlines = True)
+        if output == 3 or output == 1:
+            completeed_models.append(current_model_name)
         if TEST_MODE:
             break
-        current_model_name  = _get_model()
+        current_model_name  = _get_model(completeed_models)
 
-def _get_model(just_return_model=False):
+def _get_model(completeed_models = []):
     _config_update()
     for rdir, dirs, files in os.walk(MODELS_DIR):
         for f in files:
             if f.endswith(".py"):
-              file_path = os.path.join(rdir,f)
-              # TODO: Should remove this check, prolly has no use!
-              if USE_BLACKLIST and file_path in LISTED_MODELS:
-                  continue
-              if not USE_BLACKLIST and file_path not in LISTED_MODELS:
-                  continue
-              return file_path
+                file_path = os.path.join(rdir,f)
+                if completeed_models is not None and file_path in completeed_models:
+                    continue
+                # TODO: Should remove this check, prolly has no use!
+                if USE_BLACKLIST and file_path in LISTED_MODELS:
+                    continue
+                if not USE_BLACKLIST and file_path not in LISTED_MODELS:
+                    continue
+                skip_model_for_now = False
+
+                # Ensure the files loaded are in the order they are
+                # specified in the config file
+                for listed_model_file in LISTED_MODELS:
+                    if listed_model_file != file_path:
+                        if listed_model_file not in completeed_models:
+                            skip_model_for_now = True
+                            break
+                    else:
+                        break
+                if skip_model_for_now:
+                    continue
+                return file_path
     return None
 
 def _config_update():
@@ -64,12 +83,12 @@ def _config_update():
     global LISTED_MODELS
   
     if len(config_file)==0:
-        print("\033[1;031mWARNING:\033[0:031mNo 'models.config' file found\033[0m")
+        log("\033[1;031mWARNING:\033[0:031mNo 'models.config' file found\033[0m", log_to_file = True)
     else:
         try:
             config["MLP"]
         except KeyError:
-            print("\033[1;031mWARNING:\033[0:031mNo MLP section in 'models.config' file\033[0m")
+            log("\033[1;031mWARNING:\033[0:031mNo MLP section in 'models.config' file\033[0m", log_to_file = True, level = logging.WARNING)
         USE_BLACKLIST =  config.getboolean("MLP", "use_blacklist", fallback=USE_BLACKLIST)
         try:
             if USE_BLACKLIST:
@@ -79,13 +98,18 @@ def _config_update():
             l = []
             for model in LISTED_MODELS:
                 l.append(os.path.join(MODELS_DIR, model))
+
+            for model in l:
+                if not os.path.exists(model):
+                    l.remove(model)
+                    log("Script missing: {}".format(model), level = logging.WARNING)
             LISTED_MODELS = l
-            print("\033[1;036m{0}\033[0;036m: {1}\033[0m".format(
+            log("\033[1;036m{0}\033[0;036m: {1}\033[0m".format(
                 ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0].replace("_"," "),
-                LISTED_MODELS).lower())
+                LISTED_MODELS).lower(), log_to_file = True)
         except KeyError:
-            print("\033[1;031mWARNING:\033[0:031mNo {0} section in 'cnn.config' file\033[0m".format(
-                ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0]))
+            log("\033[1;031mWARNING:\033[0:031mNo {0} section in 'cnn.config' file\033[0m".format(
+                ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0]), log_to_file = True, level = logging.ERROR)
 
 
 def main(argv = None):
@@ -117,9 +141,15 @@ def main(argv = None):
     if not os.path.exists(MODELS_DIR_OUTPUTS):
         os.makedirs(MODELS_DIR_OUTPUTS)
     log_file = MODELS_DIR_OUTPUTS + "/log-{0}".format(hostName)
-    
-    open(log_file, "a").close()
-    print(argv)
+    try:
+      open(log_file, "a").close()
+    except FileNotFoundError:
+      if os.path.isdir(MODELS_DIR_OUTPUTS):
+        os.makedirs(MODELS_DIR_OUTPUTS)
+        open(log_file, "a").close()
+      else:
+        raise
+
     if argv is not None:#len(unused_argv)> 0:
         if argv.run:#any("r" in s for s in unused_argv) :
             TEST_MODE = False
@@ -131,9 +161,7 @@ def main(argv = None):
         else:
             USE_HISTORY = False
 
-    _config_update()
     LOGGER = set_logger(test_mode = TEST_MODE, no_log = NO_LOG, log_file = log_file)
-    print(USE_HISTORY)
     log("=====================ML-Pipeline session started")
     _main()
     log("=====================ML-Pipeline Session ended")
@@ -141,10 +169,5 @@ def main(argv = None):
 
     
 if __name__ == "__main__":  
-    #print(parser.parse_args().r)
-    # output = subprocess.run(["python3", "--version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines = True)
-    # if int(output.stdout.replace("Python ", "").split(".")[1]) < 5:
-    #     print("ERROR: Requires python 3.5 or greater")
-    #     sys.exit(1)
     main()
     
