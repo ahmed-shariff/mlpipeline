@@ -15,19 +15,15 @@ import argparse
 from mlpipeline.utils import log
 from mlpipeline.utils import set_logger
 
-from global_values import MODELS_DIR
-from global_values import TEST_MODE
-from global_values import NO_LOG
-from global_values import USE_BLACKLIST
-
-parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
-parser.add_argument('-r','--run', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true')
-parser.add_argument('-u','--use-history', help='If set will use the history log to determine if a model script has been executed.', action = 'store_true')
-parser.add_argument('-n','--no_log', help='If set non of the logs will be appended to the log files.', action = 'store_true')
-
+from mlpipeline.global_values import MODELS_DIR
+from mlpipeline.global_values import TEST_MODE
+from mlpipeline.global_values import NO_LOG
+from mlpipeline.global_values import USE_BLACKLIST
+USE_HISTORY = False
 
 def _main():
     current_model_name = _get_model()
+    print(USE_HISTORY, 123)
     while current_model_name is not None:
         #exec subprocess
         args = ["python3", "_pipeline_subprocess.py", current_model_name, MODELS_DIR]
@@ -92,7 +88,13 @@ def _config_update():
                 ["BLACKLISTED_MODELS" if USE_BLACKLIST else "WHITELISTED_MODELS"][0]))
 
 
-def main(argv):
+def main(argv = None):
+    #if argv is None:
+    parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
+    parser.add_argument('-r','--run', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true')
+    parser.add_argument('-u','--use-history', help='If set will use the history log to determine if a model script has been executed.', action = 'store_true')
+    parser.add_argument('-n','--no_log', help='If set non of the logs will be appended to the log files.', action = 'store_true')
+    argv = parser.parse_args()
     config = configparser.ConfigParser(allow_no_value=True)
     config_file = config.read("mlp.config")
     global TEST_MODE
@@ -112,9 +114,12 @@ def main(argv):
 
     hostName = socket.gethostname()
     MODELS_DIR_OUTPUTS = MODELS_DIR + "/outputs"
+    if not os.path.exists(MODELS_DIR_OUTPUTS):
+        os.makedirs(MODELS_DIR_OUTPUTS)
     log_file = MODELS_DIR_OUTPUTS + "/log-{0}".format(hostName)
+    
     open(log_file, "a").close()
-
+    print(argv)
     if argv is not None:#len(unused_argv)> 0:
         if argv.run:#any("r" in s for s in unused_argv) :
             TEST_MODE = False
@@ -128,6 +133,7 @@ def main(argv):
 
     _config_update()
     LOGGER = set_logger(test_mode = TEST_MODE, no_log = NO_LOG, log_file = log_file)
+    print(USE_HISTORY)
     log("=====================ML-Pipeline session started")
     _main()
     log("=====================ML-Pipeline Session ended")
@@ -140,5 +146,5 @@ if __name__ == "__main__":
     # if int(output.stdout.replace("Python ", "").split(".")[1]) < 5:
     #     print("ERROR: Requires python 3.5 or greater")
     #     sys.exit(1)
-    main(parser.parse_args())
+    main()
     

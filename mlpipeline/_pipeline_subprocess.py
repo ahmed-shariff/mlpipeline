@@ -13,16 +13,16 @@ from mlpipeline.utils import log
 from mlpipeline.utils import set_logger
 from mlpipeline.utils import add_script_dir_to_PATH
 
-from global_values import MODELS_DIR
-from global_values import NO_LOG
-from global_values import EXECUTED_MODELS
-from global_values import USE_BLACKLIST
-from global_values import TEST_MODE
+from mlpipeline.global_values import MODELS_DIR
+from mlpipeline.global_values import NO_LOG
+from mlpipeline.global_values import EXECUTED_MODELS
+from mlpipeline.global_values import USE_BLACKLIST
+from mlpipeline.global_values import TEST_MODE
 
-from global_values import mtime
-from global_values import version
-from global_values import train_time
-from global_values import vless
+from mlpipeline.global_values import mtime
+from mlpipeline.global_values import version
+from mlpipeline.global_values import train_time
+from mlpipeline.global_values import vless
 
 parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
 parser.add_argument("file_path", help='The file path of the model to be executed')
@@ -299,8 +299,6 @@ def main(argv):
     
     hostName = socket.gethostname()
     MODELS_DIR_OUTPUTS = MODELS_DIR + "/outputs"
-    if not os.path.exists(MODELS_DIR_OUTPUTS):
-        os.makedirs(MODELS_DIR_OUTPUTS)
     OUTPUT_FILE = MODELS_DIR_OUTPUTS + "/output-{0}".format(hostName)
     HISTORY_FILE = MODELS_DIR_OUTPUTS + "/history-{0}".format(hostName)
     TRAINING_HISTORY_LOG_FILE = MODELS_DIR_OUTPUTS + "/t_history-{0}".format(hostName)
