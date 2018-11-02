@@ -59,7 +59,7 @@ You can have any number of models in the `models` folder. Add the names of the s
 You can execute the pipeline by running the python script:
 
 ``` bash
-python pipeline.py
+mlpipeline
 ```
 Note: this will run the pipeline in test mode (Read [The two modes](#the-two-modes) for more information)
 #### Outputs
@@ -73,7 +73,7 @@ Note that the other files are used by the pipeline to keep track of training ses
 The pipeline can be executed in two modes: **test mode** and **execution mode**. When you are developing a model, you'd want to use the test mode. The pipeline when executed without any additional arguments will be executed in the test mode. Note that the test mode uses it's own config file `models_test.config`, that functions similar to the `models.config` file. To execute in execution mode, pass `-r` to the above command:
 
 ``` bash
-python pipeline.py -r
+mlpipeline -r -u
 ```
 Differences between test mode and execution mode (default behaviour):
 
