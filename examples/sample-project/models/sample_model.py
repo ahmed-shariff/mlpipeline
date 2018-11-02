@@ -7,11 +7,11 @@ from inspect import getsourcefile
 import sys
 print(sys.path)
 
-from mlp_utils import add_script_dir_to_PATH
-from mlp_utils import ExecutionModeKeys
-from mlp_utils import Versions
-from mlp_helper import Model
-from mlp_helper import DataLoader
+from mlpipeline.utils import add_script_dir_to_PATH
+from mlpipeline.utils import ExecutionModeKeys
+from mlpipeline.utils import Versions
+from mlpipeline.helper import Model
+from mlpipeline.helper import DataLoader
 
 class An_ML_Model():
   def __init__(self, hyperparameter="default value"):
