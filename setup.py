@@ -1,9 +1,9 @@
 import setuptools
-
+from mlpipeline import __version__
 
 setuptools.setup(
     name="mlpipeline",
-    version='1.1.a.3',
+    version=__version__,
     author='Ahmed Shariff',
     author_email='shariff.mfa@outlook.com',
     packages=setuptools.find_packages(),
@@ -19,6 +19,3 @@ setuptools.setup(
     classifiers=[
         "Programming Language :: Python :: 3"]
 )
-
-
-
