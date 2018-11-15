@@ -17,5 +17,13 @@ setuptools.setup(
             ]
         },
     classifiers=[
-        "Programming Language :: Python :: 3"]
+        "Programming Language :: Python :: 3",
+        "Environment :: Console",
+        "License :: OSI Approved :: MIT License",
+        "Natural Language :: English",
+        "Operating System :: POSIX :: Linux",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        
+    ]
 )
