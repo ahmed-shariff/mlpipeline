@@ -5,9 +5,11 @@ import logging
 import sys
 import os
 import re
+from easydict import EasyDict
 from inspect import getsourcefile
 from itertools import product
 from datetime import datetime
+
 LOGGER = None
 
 class ModeKeys():
@@ -68,7 +70,7 @@ class Versions():
     '''
     The class that holds the paramter versions.
     Also prvodes helper functions to define and add new parameter versions.
-'''
+    '''
     order_index = 0
     versions = {}
     versions_defaults = {}
@@ -194,8 +196,8 @@ class Versions():
                           names=None,
                           combining_parameters = [],
                           parameters = {}):
-    '''
-Allows to deifine versions by providing a range(i.e. list) of values. The names of the paramters for which range is provided should be procided by combination_parmters. The values should be provided through the paramteres dictionary. The dictionaries keys are the same as that used for the versions as well as the combining_parameters parameter. Combinations of the values of the paramters specified in combining_parameters taken from the paramters dict will be used to generate versions. Parameters in the parameters dict which are not given in combining_paramters, will be used for all the combinations produced. Prameters not specified in paramteres dict will use the default values defined.
+        '''
+        Allows to deifine versions by providing a range(i.e. list) of values. The names of the paramters for which range is provided should be procided by combination_parmters. The values should be provided through the paramteres dictionary. The dictionaries keys are the same as that used for the versions as well as the combining_parameters parameter. Combinations of the values of the paramters specified in combining_parameters taken from the paramters dict will be used to generate versions. Parameters in the parameters dict which are not given in combining_paramters, will be used for all the combinations produced. Prameters not specified in paramteres dict will use the default values defined.
 
 Example:
 rangeOnParameters(combining_paramters = [version_parameters.LEARNING_RATE, 'model_specific_param1'],
@@ -250,7 +252,7 @@ The combinations by the above call would be:
 class VersionLog():
     '''
     used to maintain model version information.
-'''
+    '''
     #list of version names
     executed_versions=[]
   
@@ -346,3 +348,124 @@ def add_script_dir_to_PATH(current_dir = None):
         sys.path = [current_dir] + sys.path
 
     log("Added dir `{}` to PYTHOAPATH. New PYTHONPATH: {}".format(current_dir, sys.path))
+        
+class Metric():
+    def __init__(self,  track_average_epoc_count = 1):
+        self.count = 0
+        self.value = 0
+        # self.global_count = 0
+        # self.global_value = 0
+        self.epoc_count = 0
+        self.epoc_value = 0
+        self.track_average_epoc_count = track_average_epoc_count
+        if self.track_average_epoc_count < 1:
+            raise ValueError("`track_average_count` should be more than or equal to 0")
+        self.track_value_list = []
+        #print(type(self.value))
+
+    def update(self, value, count = 1):
+        #value = value.item()
+        if not isinstance(value, int) and not isinstance(value, float):
+            #print(value, value.shape)
+            raise Exception("Value should be int or float, but got {}".format(type(value)))
+        self.count += count
+        self.value += value
+        self.epoc_count += count
+        self.epoc_value += value
+        # try:
+        #     #print(value.data[0], self.value.data[0], type(self.value), type(value))
+        # except:
+        #     pass
+        
+    def reset(self):
+        self.count = 0
+        self.value = 0
+
+    def reset_epoc(self):
+        if len(self.track_value_list) == self.track_average_epoc_count:
+            try:
+                self.track_value_list = self.track_value_list[1:] + [self.epoc_value/self.epoc_count]
+            except ZeroDivisionError:
+                self.track_value_list = self.track_value_list[1:] + [0]
+        else:
+            try:
+                self.track_value_list.append(self.epoc_value/self.epoc_count)
+            except ZeroDivisionError:
+                self.track_value_list.append(0)
+
+        self.epoc_count = 0
+        self.epoc_value = 0
+        
+    def avg(self):
+        try:
+            return self.value/self.count
+        except ZeroDivisionError:
+            return 0
+
+    def avg_epoc(self):
+        try:
+            return self.epoc_value/self.epoc_count
+        except ZeroDivisionError:
+            return 0
+
+    def get_tracking_average(self):
+        if len(self.track_value_list) < self.track_average_epoc_count/2:
+            return 0
+        try:
+            return statistics.mean(self.track_value_list)#sum(self.track_value_list)/len(self.track_value_list)
+        except ZeroDivisionError:
+            return 0
+
+    def get_tracking_delta(self):
+        if len(self.track_value_list) > self.track_average_epoc_count:
+            return sum(
+                [self.track_value_list[idx + 1] -
+                 self.track_value_list[idx]
+                 for idx in range(len(self.track_value_list) - 1)])
+        else:
+            return 0
+
+    def get_tracking_stdev(self):
+        try:
+            return statistics.stdev(self.track_value_list)
+        except statistics.StatisticsError:
+            return 0
+
+class MetricContainer(EasyDict):
+    def __setattr__(self, name, value):
+        if not isinstance(value, Metric):
+            raise TypeError("Value set must be type of `Metric`. Better yet, avoid maually setting a value.")        
+        super(EasyDict, self).__setattr__(name, value)
+        super(EasyDict, self).__setitem__(name, value)
+
+    def __init__(self, metrics = None, track_average_epoc_count = 1, **kwargs):
+        if metrics is not None:
+            if not isinstance(metrics, list):
+                raise TypeError("`metrics` must be a list")
+            
+            if isinstance(metrics[0], dict):
+                for metrics_set in metrics:
+                    for metric in metrics_set["metrics"]:
+                        metric_value = Metric(track_average_epoc_count = track_average_epoc_count)
+                        try:
+                            setattr(metric_value, 'track_average_epoc_count', metrics_set['track_average_epoc_count'])
+                        except KeyError:
+                            pass
+                        setattr(self, metric, metric_value)
+            else:
+                for metric in metrics:
+                    setattr(self, metric, Metric(track_average_epoc_count = track_average_epoc_count))
+
+    def reset(self, metrics = None):
+        for metric in self._get_matrics_subset(metrics):
+            metric.reset()
+
+    def _get_matrics_subset(self, metrics):
+        if metrics is None:
+            return [v for k,v in self.items()]
+        else:
+            return [v for k,v in self.items() if k in metrics]
+
+    def reset_epoc(self, metrics = None):
+        for metric in self._get_matrics_subset(metrics):
+            metric.reset_epoc()
