@@ -1,6 +1,12 @@
 # ml-pipeline
 I use this pipeline to simplify my life when working on ML projects. 
 
+## Installation
+This can be installed using pip
+```
+pip install mlpipeline
+```
+
 ## Usage (tl;dr version)
 1. Extend `mlpipeline.helper.Model` and `mlpipeline.helper.Dataloader` to suit your needs.
 2. Define the versions using the interface provided by `mlpipeline.utils.Versions`.
