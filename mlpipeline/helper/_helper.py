@@ -57,7 +57,7 @@ This function must return either `None` or a positive integer. The is used to de
 '''
         raise NotImplementedError
     def clean_model_dir(self, model_dir):
-      '''
+        '''
 This function will be called when a model needs to be reset and the directory `model_dir` needs to be cleared as well.
 '''
         raise NotImplementedError

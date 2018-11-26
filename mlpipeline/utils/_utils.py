@@ -334,7 +334,7 @@ def log(message, level = logging.INFO, log_to_file=True, modifier_1=None, modifi
   
     LOGGER.log(level, message)
     #TEST_MODE and NO_LOG will be set in the pipline script
-    if not LOGGER.TEST_MODE and not LOGGER.NO_LOG and log:
+    if not LOGGER.TEST_MODE and not LOGGER.NO_LOG and log_to_file:
         with open(LOGGER.LOG_FILE, 'a', encoding="utf-8") as log_file:
             level = ["INFO" if level is logging.INFO else "ERROR"]
             time = datetime.now().isoformat()
@@ -438,7 +438,12 @@ class MetricContainer(EasyDict):
         super(EasyDict, self).__setattr__(name, value)
         super(EasyDict, self).__setitem__(name, value)
 
-    def __init__(self, metrics = None, track_average_epoc_count = 1, **kwargs):
+    def __init__(self, metrics = None, track_average_epoc_count = 1, log_fn = None **kwargs):
+        if log_fn is None:
+            self.log = log
+        else:
+            assert callable(log_fn), "log_fn must be a callable which takes a message and `log_to_file` param"
+            self.log = log_fn
         if metrics is not None:
             if not isinstance(metrics, list):
                 raise TypeError("`metrics` must be a list")
@@ -456,16 +461,30 @@ class MetricContainer(EasyDict):
                 for metric in metrics:
                     setattr(self, metric, Metric(track_average_epoc_count = track_average_epoc_count))
 
+    def _get_matrics_subset(self, metrics, return_named_tuples = False):
+        if metrics is None:
+            if return_named_tuples:
+                return self.items()
+            else:
+                return [v for k,v in self.items()]
+        else:
+            if return_named_tuples:
+                return [(k,v) for k,v in self.items() if k in metrics]
+            else:
+                return [v for k,v in self.items() if k in metrics]
+
     def reset(self, metrics = None):
         for metric in self._get_matrics_subset(metrics):
             metric.reset()
 
-    def _get_matrics_subset(self, metrics):
-        if metrics is None:
-            return [v for k,v in self.items()]
-        else:
-            return [v for k,v in self.items() if k in metrics]
-
+    def log_metrics(self, metrics = None, log_to_file = True):
+        printable_string = ""
+        for idx, name, metric in enumerate(self._get_matrics_subset(metrics)):
+            printable_string += "{}: {:.4f}".format(name, metric)
+            if idx % 3 == 0 and idx > 0:
+                self.log(printable_string, log_to_file = log_to_file)
+                printable_string = ""
+            
     def reset_epoc(self, metrics = None):
         for metric in self._get_matrics_subset(metrics):
             metric.reset_epoc()
