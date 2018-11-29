@@ -433,34 +433,39 @@ class Metric():
 
 class MetricContainer(EasyDict):
     def __setattr__(self, name, value):
-        if not isinstance(value, Metric):
+        if name not in self.__class__.__dict__ and not isinstance(value, Metric):
             raise TypeError("Value set must be type of `Metric`. Better yet, avoid maually setting a value.")        
         super(EasyDict, self).__setattr__(name, value)
         super(EasyDict, self).__setitem__(name, value)
 
-    def __init__(self, metrics = None, track_average_epoc_count = 1, log_fn = None **kwargs):
-        if log_fn is None:
-            self.log = log
-        else:
-            assert callable(log_fn), "log_fn must be a callable which takes a message and `log_to_file` param"
-            self.log = log_fn
+    def __init__(self, metrics = None, track_average_epoc_count = 1, **kwargs):
+        metrics_dict = {}
         if metrics is not None:
             if not isinstance(metrics, list):
                 raise TypeError("`metrics` must be a list")
-            
+
             if isinstance(metrics[0], dict):
                 for metrics_set in metrics:
                     for metric in metrics_set["metrics"]:
                         metric_value = Metric(track_average_epoc_count = track_average_epoc_count)
                         try:
-                            setattr(metric_value, 'track_average_epoc_count', metrics_set['track_average_epoc_count'])
+                            metric_value.track_average_epoc_count = metrics_set['track_average_epoc_count']
                         except KeyError:
                             pass
-                        setattr(self, metric, metric_value)
+                        metrics_dict[metric] = metric_value
             else:
                 for metric in metrics:
-                    setattr(self, metric, Metric(track_average_epoc_count = track_average_epoc_count))
+                    #setattr(self, metric, Metric(track_average_epoc_count = track_average_epoc_count))
+                    metrics_dict[metric] = Metric(track_average_epoc_count = track_average_epoc_count)
 
+
+            for k,v in metrics_dict.items():
+                setattr(self, k, v)
+            
+            for k in self.__class__.__dict__.keys():
+                if not (k.startswith('__') and k.endswith('__')) and not k in ('update', 'pop', 'reset', 'log_metrics', 'reset_epoc', '_get_matrics_subset'):
+                    setattr(self, k, getattr(self, k))
+        
     def _get_matrics_subset(self, metrics, return_named_tuples = False):
         if metrics is None:
             if return_named_tuples:
@@ -477,13 +482,22 @@ class MetricContainer(EasyDict):
         for metric in self._get_matrics_subset(metrics):
             metric.reset()
 
-    def log_metrics(self, metrics = None, log_to_file = True):
+    def log_metrics(self, metrics = None, log_to_file = True, complete_epoc = False):
+        return_string = ""
         printable_string = ""
-        for idx, name, metric in enumerate(self._get_matrics_subset(metrics)):
-            printable_string += "{}: {:.4f}".format(name, metric)
+        for idx, (name, metric) in enumerate(self._get_matrics_subset(metrics, return_named_tuples = True)):
+            if complete_epoc:
+                printable_string += "{}: {:.4f}    ".format(name, metric.avg_epoc())
+            else:
+                printable_string += "{}: {:.4f}    ".format(name, metric.avg())
             if idx % 3 == 0 and idx > 0:
-                self.log(printable_string, log_to_file = log_to_file)
+                log(message = printable_string, log_to_file = log_to_file)
+                return_string += printable_string
                 printable_string = ""
+        if printable_string != "":
+            log(message = printable_string, log_to_file = log_to_file)
+            return_string +=printable_string
+        return return_string
             
     def reset_epoc(self, metrics = None):
         for metric in self._get_matrics_subset(metrics):

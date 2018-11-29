@@ -73,8 +73,9 @@ class TestingModel(Model):
                 
                 if idx%3 == 0:
                     metric_container.reset()
+            metric_container.log_metrics(['a', '2'])
             metric_container.reset_epoc()
-                
+        metric_container.log_metrics()
         self.log("trained: {}".format(self.model.train()))
 
     def evaluate_model(self, input_fn, steps):
