@@ -5,6 +5,7 @@ import logging
 import sys
 import os
 import re
+import statistics
 from easydict import EasyDict
 from inspect import getsourcefile
 from itertools import product
