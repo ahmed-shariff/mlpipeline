@@ -418,7 +418,7 @@ class Metric():
             return 0
 
     def get_tracking_delta(self):
-        if len(self.track_value_list) > self.track_average_epoc_count:
+        if len(self.track_value_list) == self.track_average_epoc_count:
             return sum(
                 [self.track_value_list[idx + 1] -
                  self.track_value_list[idx]
