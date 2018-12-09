@@ -483,7 +483,7 @@ class MetricContainer(EasyDict):
         for metric in self._get_matrics_subset(metrics):
             metric.reset()
 
-    def log_metrics(self, metrics = None, log_to_file = True, complete_epoc = False):
+    def log_metrics(self, metrics = None, log_to_file = True, complete_epoc = False, items_per_row = 3):
         return_string = ""
         printable_string = ""
         for idx, (name, metric) in enumerate(self._get_matrics_subset(metrics, return_named_tuples = True)):
@@ -491,7 +491,7 @@ class MetricContainer(EasyDict):
                 printable_string += "{}: {:.4f}    ".format(name, metric.avg_epoc())
             else:
                 printable_string += "{}: {:.4f}    ".format(name, metric.avg())
-            if idx % 3 == 0 and idx > 0:
+            if (idx + 1) % items_per_row == 0 and idx > 0:
                 log(message = printable_string, log_to_file = log_to_file)
                 return_string += printable_string
                 printable_string = ""
