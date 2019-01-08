@@ -1,6 +1,10 @@
 import setuptools
 from mlpipeline import __version__
 
+# to build and install:
+# python setup.py
+# pip install dist/mlpipeline-*-py3-none-any.whl
+
 setuptools.setup(
     name="mlpipeline",
     version=__version__,
