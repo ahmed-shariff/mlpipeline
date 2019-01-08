@@ -332,7 +332,9 @@ def log(message, level = logging.INFO, log_to_file=True, modifier_1=None, modifi
         modifier_2 = ""
 
     message = "{0}{1}{2}{3}".format(modifier_1, modifier_2, message, reset_string)
-  
+    if LOGGER is None:
+        set_logger()
+        self.log("'set_logger' not called. Setting up Logger with default settings. To override, call 'set_logger' before any calls to 'log'", level = logging.WARN, modifier_1 = console_colors.RED_FG)
     LOGGER.log(level, message)
     #TEST_MODE and NO_LOG will be set in the pipline script
     if not LOGGER.TEST_MODE and not LOGGER.NO_LOG and log_to_file:
