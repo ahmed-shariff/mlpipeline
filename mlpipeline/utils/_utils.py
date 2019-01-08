@@ -485,18 +485,33 @@ class MetricContainer(EasyDict):
         for metric in self._get_matrics_subset(metrics):
             metric.reset()
 
-    def log_metrics(self, metrics = None, log_to_file = True, complete_epoc = False, items_per_row = 3):
+    def log_metrics(self, metrics = None, log_to_file = True, complete_epoc = False, items_per_row = 3, charachters_per_row = 50):
         return_string = ""
         printable_string = ""
-        for idx, (name, metric) in enumerate(self._get_matrics_subset(metrics, return_named_tuples = True)):
+        row_item_count = 0
+        row_char_count = 0
+        for name, metric in self._get_matrics_subset(metrics, return_named_tuples = True):
             if complete_epoc:
-                printable_string += "{}: {:.4f}    ".format(name, metric.avg_epoc())
+                s = "{}: {:.4f}    ".format(name, metric.avg_epoc())
             else:
-                printable_string += "{}: {:.4f}    ".format(name, metric.avg())
-            if (idx + 1) % items_per_row == 0 and idx > 0:
+                s = "{}: {:.4f}    ".format(name, metric.avg())
+            row_char_count += len(s)
+            if row_char_count > charachters_per_row:
+                log(message = printable_string, log_to_file = log_to_file)
+                return_string += printable_string
+                printable_string = s
+                row_char_count = len(s)
+                row_item_count = 0
+            else:
+                printable_string += s
+                
+            row_item_count +=1    
+            if row_item_count % items_per_row == 0:
                 log(message = printable_string, log_to_file = log_to_file)
                 return_string += printable_string
                 printable_string = ""
+                row_char_count = 0
+                row_item_count = 0
         if printable_string != "":
             log(message = printable_string, log_to_file = log_to_file)
             return_string +=printable_string
