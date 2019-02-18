@@ -7,24 +7,26 @@ import argparse
 import logging
 from datetime import datetime
 
-from mlpipeline.utils import ExecutionModeKeys
-from mlpipeline.utils import version_parameters
-from mlpipeline.utils import VersionLog
-from mlpipeline.utils import console_colors
-from mlpipeline.utils import log
-from mlpipeline.utils import set_logger
-from mlpipeline.utils import add_script_dir_to_PATH
+from mlpipeline.utils import (ExecutionModeKeys,
+                              version_parameters,
+                              VersionLog,
+                              console_colors,
+                              log,
+                              set_logger,
+                              add_script_dir_to_PATH,
+                              _get_imported_files,
+                              copy_imported_user_scripts)
 
-from mlpipeline.global_values import MODELS_DIR
-from mlpipeline.global_values import NO_LOG
-from mlpipeline.global_values import EXECUTED_MODELS
-from mlpipeline.global_values import USE_BLACKLIST
-from mlpipeline.global_values import TEST_MODE
 
-from mlpipeline.global_values import mtime
-from mlpipeline.global_values import version
-from mlpipeline.global_values import train_time
-from mlpipeline.global_values import vless
+from mlpipeline.global_values import (MODELS_DIR,
+                                      NO_LOG,
+                                      EXECUTED_MODELS,
+                                      USE_BLACKLIST,
+                                      TEST_MODE,
+                                      mtime,
+                                      version,
+                                      train_time,
+                                      vless)
 
 def _main(file_path):
     current_model, version_name, clean_model_dir = _get_model(file_path)
@@ -67,7 +69,8 @@ def _main(file_path):
         shutil.rmtree(model_dir, ignore_errors=True)
     else:
         record_training = True
-        model_dir="{0}/outputs/model_ckpts/{1}-{2}".format(MODELS_DIR.rstrip("/"),
+        model_dir_suffix = "-" + model_dir_suffix if model_dir_suffix is not None else ""
+        model_dir="{0}/outputs/model_ckpts/{1}{2}".format(MODELS_DIR.rstrip("/"),
 							 current_model.name.split(".")[-2],
 							 model_dir_suffix)
     eval_complete=False
@@ -81,6 +84,8 @@ def _main(file_path):
             current_model.clean_model_dir(model_dir)
             log("Cleaned model dir", modifier_1 = console_colors.RED_FG)
         current_model.pre_execution_hook(version_spec, model_dir)
+        os.makedirs(model_dir, exist_ok = True)
+        copy_imported_user_scripts(current_model, model_dir)
         if TEST_MODE:
             test__eval_steps = 1
             train_eval_steps = 1
@@ -178,7 +183,7 @@ def _get_model(file_path, just_return_model=False):
     except:
         log("{0} is not a model script. It does not contain a `MODEL` global variable".format(file_path))
         return None, None, False
-
+    _get_imported_files(model, MODELS_DIR)
     # TODO: why did i add this in the first place??
     # if just_return_model:
     #	  print("\033[1;33mJust returning module\033[1;0m")

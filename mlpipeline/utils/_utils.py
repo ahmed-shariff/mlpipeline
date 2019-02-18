@@ -6,6 +6,7 @@ import sys
 import os
 import re
 import statistics
+import shutil
 from easydict import EasyDict
 from inspect import getsourcefile
 from itertools import product
@@ -351,7 +352,27 @@ def add_script_dir_to_PATH(current_dir = None):
         sys.path = [current_dir] + sys.path
 
     log("Added dir `{}` to PYTHOAPATH. New PYTHONPATH: {}".format(current_dir, sys.path))
-        
+
+def _get_imported_files(model, root):
+    modules_list = []
+    root = os.path.abspath(root)
+    for module in sys.modules.values():
+        try:
+            file_name =  os.path.abspath(module.__file__)
+            if root in file_name:
+                modules_list.append(file_name)
+            else:
+                pass
+        except:
+            pass
+    model.__relative_imported_files = modules_list
+
+def copy_imported_user_scripts(model, dst):
+    log("Copying imported custom scripts to {}".format(dst))
+    for file in model.__relative_imported_files:
+        shutil.copy(file, dst)
+        log("\tCopied {}".format(file))
+    
 class Metric():
     def __init__(self,  track_average_epoc_count = 1):
         self.count = 0
