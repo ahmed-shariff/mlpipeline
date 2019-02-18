@@ -353,8 +353,9 @@ def add_script_dir_to_PATH(current_dir = None):
 
     log("Added dir `{}` to PYTHOAPATH. New PYTHONPATH: {}".format(current_dir, sys.path))
 
-def _get_imported_files(model, root):
-    modules_list = []
+def _collect_related_files(model, root, additional_files = []):
+    assert isinstance(additional_files, list)
+    modules_list = additional_files
     root = os.path.abspath(root)
     for module in sys.modules.values():
         try:
@@ -365,11 +366,11 @@ def _get_imported_files(model, root):
                 pass
         except:
             pass
-    model.__relative_imported_files = modules_list
+    model.__related_files = modules_list
 
-def copy_imported_user_scripts(model, dst):
+def copy_related_files(model, dst):
     log("Copying imported custom scripts to {}".format(dst))
-    for file in model.__relative_imported_files:
+    for file in model.__related_files:
         shutil.copy(file, dst)
         log("\tCopied {}".format(file))
     

@@ -14,8 +14,8 @@ from mlpipeline.utils import (ExecutionModeKeys,
                               log,
                               set_logger,
                               add_script_dir_to_PATH,
-                              _get_imported_files,
-                              copy_imported_user_scripts)
+                              _collect_related_files,
+                              copy_related_files)
 
 
 from mlpipeline.global_values import (MODELS_DIR,
@@ -85,7 +85,7 @@ def _main(file_path):
             log("Cleaned model dir", modifier_1 = console_colors.RED_FG)
         current_model.pre_execution_hook(version_spec, model_dir)
         os.makedirs(model_dir, exist_ok = True)
-        copy_imported_user_scripts(current_model, model_dir)
+        copy_related_files(current_model, model_dir)
         if TEST_MODE:
             test__eval_steps = 1
             train_eval_steps = 1
@@ -183,7 +183,7 @@ def _get_model(file_path, just_return_model=False):
     except:
         log("{0} is not a model script. It does not contain a `MODEL` global variable".format(file_path))
         return None, None, False
-    _get_imported_files(model, MODELS_DIR)
+    _collect_related_files(model, MODELS_DIR, [os.path.abspath(module.__file__)])
     # TODO: why did i add this in the first place??
     # if just_return_model:
     #	  print("\033[1;33mJust returning module\033[1;0m")
