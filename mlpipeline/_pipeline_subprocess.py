@@ -320,7 +320,7 @@ def main():
     else:
         TEST_MODE = True
 
-    if argv.use_history:#any("h" in s for s in unused_argv):
+    if True:#argv.use_history:#any("h" in s for s in unused_argv):
         if not os.path.isfile(HISTORY_FILE) and not os.path.isfile(TRAINING_HISTORY_LOG_FILE):
             print("\033[1;31mWARNING: No 'history' file in 'models' folder. No history read\033[0m")
         else:

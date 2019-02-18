@@ -32,8 +32,8 @@ def _main():
             args.append("-n")
         if not TEST_MODE:
             args.append("-r")
-        if USE_HISTORY:
-            args.append("-u")
+        # if USE_HISTORY:
+        #     args.append("-u")
         output = subprocess.call(args, universal_newlines = True)
         if output == 3 or output == 1:
             completeed_models.append(current_model_name)
@@ -123,7 +123,6 @@ def main(argv = None):
     global TEST_MODE
     global NO_LOG
     global MODELS_DIR
-    global USE_HISTORY
     
     if len(config_file)==0:
         print("\033[1;031mWARNING:\033[0:031mNo 'mlp.config' file found\033[0m")
@@ -155,10 +154,10 @@ def main(argv = None):
         else:
             TEST_MODE = True
       
-        if argv.use_history:#any("h" in s for s in unused_argv):
-            USE_HISTORY = True
-        else:
-            USE_HISTORY = False
+        # if argv.use_history:#any("h" in s for s in unused_argv):
+        #     USE_HISTORY = True
+        # else:
+        #     USE_HISTORY = False
 
     LOGGER = set_logger(test_mode = TEST_MODE, no_log = NO_LOG, log_file = log_file)
     log("=====================ML-Pipeline session started")
