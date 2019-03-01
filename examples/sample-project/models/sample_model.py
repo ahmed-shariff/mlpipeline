@@ -77,6 +77,7 @@ class TestingModel(Model):
             metric_container.reset_epoc()
         metric_container.log_metrics()
         self.log("trained: {}".format(self.model.train()))
+        self.copy_related_files("models/exports")
 
     def evaluate_model(self, input_fn, steps):
         self.log("steps: {}".format(steps))

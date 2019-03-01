@@ -3,6 +3,8 @@ from mlpipeline.utils import ExecutionModeKeys
 from mlpipeline.utils import ModeKeys
 from mlpipeline.utils import log
 from mlpipeline.utils import console_colors
+from mlpipeline.utils import copy_related_files
+from mlpipeline.utils import _collect_related_files
 
 class Model():
     '''
@@ -12,6 +14,7 @@ class Model():
     allow_delete_model_dir = False
     reset_steps = False
     summery = None
+    __related_files = []
     def __init__(self, versions, allow_delete_model_dir=False, reset_steps=False):
         '''
     version: a instance of Version, which will be used to obtain the versios of the model to execute.
@@ -80,7 +83,8 @@ try to include the relevent information you would want to refer to when assessin
                                 message),
             log_to_file=log_to_file, **kargs)
 
-
+    copy_related_files = copy_related_files
+    _collect_related_files = _collect_related_files
 
 class DataLoader():
     summery = None

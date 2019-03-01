@@ -368,10 +368,16 @@ def _collect_related_files(model, root, additional_files = []):
             pass
     model.__related_files = modules_list
 
-def copy_related_files(model, dst):
-    log("Copying imported custom scripts to {}".format(dst))
+def copy_related_files(model, dst_dir):
+    try:
+        os.makedirs(dst_dir)
+        log("Created directories(s): {}".format(dst_dir))
+    except OSError:
+        pass
+    assert os.path.isdir(dst_dir)
+    log("Copying imported custom scripts to {}".format(dst_dir))
     for file in model.__related_files:
-        shutil.copy(file, dst)
+        shutil.copy(file, dst_dir)
         log("\tCopied {}".format(file))
     
 class Metric():
