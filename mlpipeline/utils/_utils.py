@@ -67,7 +67,16 @@ class version_parameters():
     CLASSES_COUNT = "classes_count"
     CLASSES_OFFSET = "classes_offset"
     USE_ALL_CLASSES = "use_all_classes"
-  
+
+
+log_special_tokens = EasyDict(
+    MODE_RUNNING = "RUNNING MODEL TRAINING",
+    MODE_TESTING = "TESTING",
+    MODEL_TRAINED = "Model trained",
+    MODEL_EVALED = "Model evaluation complete",
+    SESSION_STARTED = "=====================ML-Pipeline session started",
+    SESSION_ENDED = "=====================ML-Pipeline Session ended")
+    
 class Versions():
     '''
     The class that holds the paramter versions.
@@ -322,6 +331,9 @@ def _genName():
 def log(message, level = logging.INFO, log_to_file=True, modifier_1=None, modifier_2=None):
     # if level is not logging.INFO and level is not logging.ERROR:
     #   raise AttributeError("level cannot be other than logging.INFO or logging.ERROR, coz i am lazy to get others in here")
+    assert any(special_token in message for special_token in
+               log_special_tokens.values()), \
+               "`message` cannot contain special token (check utils.log_special_tokens)"
     if modifier_1 is None and modifier_2 is None:
         reset_string = ""
     else:
