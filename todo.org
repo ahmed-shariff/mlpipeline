@@ -8,15 +8,28 @@
 - Better version control for the models and data/metadata.
 - Group a set of files as a experiment.
 - Allow the model scripts to infer if the pipeline is in TEST or TRAIN mode.
-- How can I handle situations where I want to relaunch the same experiment? use multiple versions with different names?
 - The classification steps passed to the training component, what if the steps calculated that way is too confusing? like I only want the number of epocs be passed?
-- clean a easier logging.
+- ~~ clean a easier logging.~~
 
 
-- [X] Add a function that will be executed at the end of the loop, where I can add stuff like moving files, etc.
-- [ ] Commit following each train and eval loop.
-- [ ] Reduce the dependencies on Versions.
-- [ ] Is there a separate need for MODEL_DIR_SUFFIX?
-- [ ] Rethink allow_delete_model_dir
-- [ ] Rethink how the training time is recorded to ensure a model that ended up failing to train can be relaunched. Or is this even an good behaviour to have?
-- [ ] Let the user override the checking-modified-time behaviour
+* DONE Add a function that will be executed at the end of the loop, where I can add stuff like moving files, etc.
+* TODO Commit following each train and eval loop.                       :1_9:
+* DONE Is there a separate need for MODEL_DIR_SUFFIX? yes!              :1_9:
+* TODO Rethink allow_delete_model_dir
+* TODO Rethink how the training time is recorded to ensure a model that ended up failing to train can be relaunched. Or is this even an good behaviour to have?
+* TODO Let the user override the checking-modified-time behaviour
+* TODO mlflow integration [0/5]                                         :1_9:
+** TODO Will be using the mlflow tracking interface
+** TODO The experiment name will be the name of the script running [0/3]
+*** A script being launched by the subprocess is to be considered an experiment
+*** Each experiment can have a different set of versions, which will be represented by a run.
+*** TODO Can an experiment have versions with the same name? Preferably not
+*** TODO Are the mlrun stuff to be gitted?
+** TODO The metric_container will log all stuff that is logged when log_metrics is being called
+** TODO The train and eval functions are expected to return a metric_container which will be logged in both normal and mlflow
+** TODO The UI will be launched along side the pipeline. Also allow to launch the ui separately through the mlpipeline.
+* TODO tensorboardx integration                                         :1_9:
+* TODO Refactors [0/3]                                                  :1_10:
+** TODO Rename model to experiment
+** TODO Versions use easydict
+** TODO Reduce the dependencies on Versions.
