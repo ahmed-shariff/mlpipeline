@@ -531,19 +531,20 @@ class MetricContainer(EasyDict):
         for metric in self._get_matrics_subset(metrics):
             metric.reset()
 
-    def log_metrics(self, metrics = None, log_to_file = True, complete_epoc = False, items_per_row = 3, charachters_per_row = 50):
+    def log_metrics(self, metrics = None, log_to_file = True, complete_epoc = False, items_per_row = 3, charachters_per_row = 50, name_prefix = ""):
         return_string = ""
         printable_string = ""
         row_item_count = 0
         row_char_count = 0
         for name, metric in self._get_matrics_subset(metrics, return_named_tuples = True):
+            name = name_prefix + name
             if complete_epoc:
                 value = metric.avg_epoc()
             else:
                 value = metric.avg()
                 
             s = "{}: {:.4f}    ".format(name, value)
-            if use_mlflow:
+            if use_mlflow and log_to_file:
                 mlflow.log_metric(name, value)
             row_char_count += len(s)
             if row_char_count > charachters_per_row:

@@ -19,7 +19,8 @@ from mlpipeline.utils import (ExecutionModeKeys,
                               log,
                               set_logger,
                               add_script_dir_to_PATH,
-                              use_mlflow)
+                              use_mlflow,
+                              MetricContainer)
 
 
 from mlpipeline.global_values import (MODELS_DIR,
@@ -81,7 +82,7 @@ def _main(file_path):
         if use_mlflow:
             mlflow.set_tracking_uri(os.path.abspath("{}/{}".format(output_dir, "mlruns")))
             mlflow.set_experiment(current_model.name)
-            mlflow.start_run(run_name = version_name)
+            mlflow.start_run(run_name = version_name, source_name = current_model.name)
     
     eval_complete=False
     #LOGGER.setLevel(logging.INFO)
@@ -109,7 +110,10 @@ def _main(file_path):
         log("Steps: {0}".format(classification_steps))
         if classification_steps > 0:
             train_output = current_model.train_model(dataloader.get_train_input(), classification_steps)
-            log("Model traning output: {0}".format(train_output))
+            if isinstance(train_output, MetricContainer):
+                train_output = train_output.log_metrics(log_to_file = False, complete_epoc = True)
+            if isinstance(train_output, str):
+                log("Model traning output: {0}".format(train_output))
             log("Model trained")
         else:
             log("No training. Loaded pretrained model")
@@ -118,6 +122,13 @@ def _main(file_path):
             log("Training evaluation started: {0} steps".format(train_eval_steps))
             train_results = current_model.evaluate_model(dataloader.get_train_input(mode = ExecutionModeKeys.TEST),
                                                          steps = train_eval_steps)
+            log("Eval on train set: ")
+            if isinstance(train_results, MetricContainer):
+                train_results = train_results.log_metrics(complete_epoc = True, name_prefix = "TRAIN_")
+            elif isinstance(train_results, str):
+                log("{0}".format(train_results))
+            else:
+                raise ValueError("The output of `evaluate_model` should be a string or a `MetricContainer`")
         except Exception as e:
             train_results = "Training evaluation failed: {0}".format(str(e))
             log(train_results, logging.ERROR)
@@ -128,15 +139,20 @@ def _main(file_path):
             log("Testing evaluation started: {0} steps".format(test__eval_steps))
             eval_results = current_model.evaluate_model(dataloader.get_test_input(),
 						      steps = test__eval_steps)
+            log("Eval on train set:")
+            if isinstance(eval_results, MetricContainer):
+                eval_results = eval_results.log_metrics(complete_epoc = True, name_prefix = "TEST_")
+            elif isinstance(eval_results, str):
+                log("{0}".format(eval_results))
+            else:
+                raise ValueError("The output of `evaluate_model` should be a string or a `MetricContainer`")
         except Exception as e:
             eval_results = "Test evaluation failed: {0}".format(str(e))
             log(eval_results, logging.ERROR)
             if TEST_MODE:
                 raise
-	
+
         log("Model evaluation complete")
-        log("Eval on train set: {0}".format(train_results))
-        log("Eval on test set:  {0}".format(eval_results))
         _add_to_and_return_result_string("Eval on train set: {0}".format(train_results))
         _add_to_and_return_result_string("Eval on test  set: {0}".format(eval_results))
         _add_to_and_return_result_string("-------------------------------------------")

@@ -83,6 +83,10 @@ class TestingModel(Model):
         self.log("steps: {}".format(steps))
         self.log("calling input fn")
         input_fn()
+        metrics = MetricContainer(['a', 'b'])
+        metrics.a.update(10,1)
+        metrics.b.update(2,1)
+        return metrics
 
 dl = TestingDataLoader()
 v = Versions(0.01, dl, 1, 10)
