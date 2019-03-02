@@ -20,11 +20,23 @@
 * TODO Let the user override the checking-modified-time behaviour
 * TODO mlflow integration [0/5]                                         :1_9:
 ** TODO Will be using the mlflow tracking interface
-** TODO The experiment name will be the name of the script running [0/3]
-*** A script being launched by the subprocess is to be considered an experiment
-*** Each experiment can have a different set of versions, which will be represented by a run.
+** TODO The experiment name will be the name of the script running [3/4]
+*** DONE A script being launched by the subprocess is to be considered an experiment
+    CLOSED: [2019-03-03 Sun 02:49]
+    :LOGBOOK:
+    - State "DONE"       from "TODO"       [2019-03-03 Sun 02:49]
+    :END:
+*** DONE Each experiment can have a different set of versions, which will be represented by a run.
+    CLOSED: [2019-03-03 Sun 02:49]
+    :LOGBOOK:
+    - State "DONE"       from "TODO"       [2019-03-03 Sun 02:49]
+    :END:
 *** TODO Can an experiment have versions with the same name? Preferably not
-*** TODO Are the mlrun stuff to be gitted?
+*** DONE Are the mlrun stuff to be gitted? YES/for now
+    CLOSED: [2019-03-03 Sun 02:52]
+    :LOGBOOK:
+    - State "DONE"       from "TODO"       [2019-03-03 Sun 02:52]
+    :END:
 ** TODO The metric_container will log all stuff that is logged when log_metrics is being called
 ** TODO The train and eval functions are expected to return a metric_container which will be logged in both normal and mlflow
 ** TODO The UI will be launched along side the pipeline. Also allow to launch the ui separately through the mlpipeline.

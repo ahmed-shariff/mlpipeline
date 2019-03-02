@@ -5,6 +5,11 @@ import shutil
 import socket
 import argparse
 import logging
+try:
+    import mlflow
+except ImportError:
+    pass
+    
 from datetime import datetime
 
 from mlpipeline.utils import (ExecutionModeKeys,
@@ -13,7 +18,8 @@ from mlpipeline.utils import (ExecutionModeKeys,
                               console_colors,
                               log,
                               set_logger,
-                              add_script_dir_to_PATH)
+                              add_script_dir_to_PATH,
+                              use_mlflow)
 
 
 from mlpipeline.global_values import (MODELS_DIR,
@@ -68,12 +74,19 @@ def _main(file_path):
     else:
         record_training = True
         model_dir_suffix = "-" + model_dir_suffix if model_dir_suffix is not None else ""
-        model_dir="{0}/outputs/model_ckpts/{1}{2}".format(MODELS_DIR.rstrip("/"),
-							 current_model.name.split(".")[-2],
-							 model_dir_suffix)
+        output_dir = "{}/outputs".format(MODELS_DIR.rstrip("/"))
+        model_dir="{}/model_ckpts/{}{}".format(output_dir,
+                                               current_model.name.split(".")[-2],
+					       model_dir_suffix)
+        if use_mlflow:
+            mlflow.set_tracking_uri(os.path.abspath("{}/{}".format(output_dir, "mlruns")))
+            mlflow.set_experiment(current_model.name)
+            mlflow.start_run(run_name = version_name)
+    
     eval_complete=False
     #LOGGER.setLevel(logging.INFO)
 
+    
     train_results = ""
     eval_results = ""
     
@@ -145,6 +158,8 @@ def _main(file_path):
         else:
             log("Exception: {0}".format(str(e)), logging.ERROR)
             sys.exit(1)
+    if not TEST_MODE and use_mlflow:
+        mlflow.end_run()
 
     
 def _get_training_steps(mode, model, clean_model_dir):

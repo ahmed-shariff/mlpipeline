@@ -12,6 +12,12 @@ from inspect import getsourcefile
 from itertools import product
 from datetime import datetime
 
+try:
+    import mlflow
+    use_mlflow = True
+except ImportError:
+    use_mlflow = False
+
 LOGGER = None
 
 class ModeKeys():
@@ -331,9 +337,9 @@ def _genName():
 def log(message, level = logging.INFO, log_to_file=True, modifier_1=None, modifier_2=None):
     # if level is not logging.INFO and level is not logging.ERROR:
     #   raise AttributeError("level cannot be other than logging.INFO or logging.ERROR, coz i am lazy to get others in here")
-    assert any(special_token in message for special_token in
-               log_special_tokens.values()), \
-               "`message` cannot contain special token (check utils.log_special_tokens)"
+    # assert any(special_token in message for special_token in
+    #            log_special_tokens.values()), \
+    #            "`message` cannot contain special token (check utils.log_special_tokens)"
     if modifier_1 is None and modifier_2 is None:
         reset_string = ""
     else:
@@ -532,9 +538,13 @@ class MetricContainer(EasyDict):
         row_char_count = 0
         for name, metric in self._get_matrics_subset(metrics, return_named_tuples = True):
             if complete_epoc:
-                s = "{}: {:.4f}    ".format(name, metric.avg_epoc())
+                value = metric.avg_epoc()
             else:
-                s = "{}: {:.4f}    ".format(name, metric.avg())
+                value = metric.avg()
+                
+            s = "{}: {:.4f}    ".format(name, value)
+            if use_mlflow:
+                mlflow.log_metric(name, value)
             row_char_count += len(s)
             if row_char_count > charachters_per_row:
                 log(message = printable_string, log_to_file = log_to_file)
