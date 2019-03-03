@@ -74,7 +74,7 @@ class version_parameters():
     CLASSES_OFFSET = "classes_offset"
     USE_ALL_CLASSES = "use_all_classes"
 
-
+        
 log_special_tokens = EasyDict(
     MODE_RUNNING = "RUNNING MODEL TRAINING",
     MODE_TESTING = "TESTING",
@@ -308,8 +308,7 @@ class VersionLog():
         self.executed_versions=[]
         self.executing_version=None
         self.executing_v_time=0.0
-
-
+        
 def set_logger(test_mode = True, no_log = True, log_file = None):
     global LOGGER
     formatter = logging.Formatter(fmt= "%(asctime)s:{0}{1}%(levelname)s:{2}%(name)s{3}- %(message)s" \
@@ -355,7 +354,7 @@ def log(message, level = logging.INFO, log_to_file=True, modifier_1=None, modifi
         set_logger()
         self.log("'set_logger' not called. Setting up Logger with default settings. To override, call 'set_logger' before any calls to 'log'", level = logging.WARN, modifier_1 = console_colors.RED_FG)
     LOGGER.log(level, message)
-    #TEST_MODE and NO_LOG will be set in the pipline script
+    #TEST_MODE and NO_LOG will be set in the pipline subprocess script
     if not LOGGER.TEST_MODE and not LOGGER.NO_LOG and log_to_file:
         with open(LOGGER.LOG_FILE, 'a', encoding="utf-8") as log_file:
             level = ["INFO" if level is logging.INFO else "ERROR"]
@@ -482,11 +481,15 @@ class Metric():
 
 class MetricContainer(EasyDict):
     def __setattr__(self, name, value):
+        # Blocking setting new attributes may not be pythonic, just too lazy to figure out the pythonic way
+        # Just that blocking here give better clarity as to what could go wrong
         if name not in self.__class__.__dict__ and not isinstance(value, Metric):
             raise TypeError("Value set must be type of `Metric`. Better yet, avoid maually setting a value.")        
         super(EasyDict, self).__setattr__(name, value)
         super(EasyDict, self).__setitem__(name, value)
 
+    __setitem__ = __setattr__
+    
     def __init__(self, metrics = None, track_average_epoc_count = 1, **kwargs):
         metrics_dict = {}
         if metrics is not None:
@@ -544,7 +547,8 @@ class MetricContainer(EasyDict):
                 value = metric.avg()
                 
             s = "{}: {:.4f}    ".format(name, value)
-            if use_mlflow and log_to_file:
+            # TEST_MODE is set in the pipeline subprocess script
+            if use_mlflow and log_to_file and not LOGGER.TEST_MODE:
                 mlflow.log_metric(name, value)
             row_char_count += len(s)
             if row_char_count > charachters_per_row:

@@ -80,8 +80,20 @@ def _main(file_path):
                                                current_model.name.split(".")[-2],
 					       model_dir_suffix)
         if use_mlflow:
-            mlflow.set_tracking_uri(os.path.abspath("{}/{}".format(output_dir, "mlruns")))
+            tracking_uri = os.path.abspath("{}/{}".format(output_dir, "mlruns"))
+            mlflow.set_tracking_uri(tracking_uri)
             mlflow.set_experiment(current_model.name)
+            # Delete runs with the same name as the current version
+            mlflow_client = mlflow.tracking.MlflowClient(tracking_uri)
+            experiment_ids = [exp.experiment_id
+                          for exp in mlflow_client.list_experiments() if current_model.name == exp.name]
+            if len(experiment_ids) > 0:
+                run_infos = mlflow_client.list_run_infos(experiment_ids[0])
+                run_uuids = [run_info.run_uuid for run_info in run_infos \
+                             for run_tag in mlflow_client.get_run(run_info.run_uuid).data.tags \
+                             if run_tag.key == mlflow.utils.mlflow_tags.MLFLOW_RUN_NAME and run_tag.value == version_name]
+                for run_uuid in run_uuids:
+                    mlflow_client.delete_run(run_uuid)
             mlflow.start_run(run_name = version_name, source_name = current_model.name)
     
     eval_complete=False

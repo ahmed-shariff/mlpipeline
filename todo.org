@@ -1,3 +1,4 @@
+#+TODO: TODO(t) INPROGRESS(p) | DONE(d) CANCELED(c)
 * Random thoughts
 - How can the data pipeline be more disciplined?
   - Set up best practices
@@ -18,31 +19,22 @@
 * TODO Rethink allow_delete_model_dir
 * TODO Rethink how the training time is recorded to ensure a model that ended up failing to train can be relaunched. Or is this even an good behaviour to have?
 * TODO Let the user override the checking-modified-time behaviour
-* TODO mlflow integration [1/6]                                         :1_9:
+* TODO mlflow integration [3/6]                                         :1_9:
 ** TODO Will be using the mlflow tracking interface
-** TODO The experiment name will be the name of the script running [3/4]
+** DONE The experiment name will be the name of the script running [4/4]
 *** DONE A script being launched by the subprocess is to be considered an experiment
     CLOSED: [2019-03-03 Sun 02:49]
-    :LOGBOOK:
-    - State "DONE"       from "TODO"       [2019-03-03 Sun 02:49]
-    :END:
 *** DONE Each experiment can have a different set of versions, which will be represented by a run.
     CLOSED: [2019-03-03 Sun 02:49]
-    :LOGBOOK:
-    - State "DONE"       from "TODO"       [2019-03-03 Sun 02:49]
-    :END:
-*** TODO Can an experiment have versions with the same name? Preferably not
+*** DONE Can an experiment have versions with the same name? Preferably not
+    CLOSED: [2019-03-03 Sun 16:32]
+    - Old versions will be mlflow_deleted. That is based on the assumption that the version is being overwritten.
 *** DONE Are the mlrun stuff to be gitted? YES/for now
     CLOSED: [2019-03-03 Sun 02:52]
-    :LOGBOOK:
-    - State "DONE"       from "TODO"       [2019-03-03 Sun 02:52]
-    :END:
 ** DONE The metric_container will log all stuff that is logged when log_metrics is being called
    CLOSED: [2019-03-03 Sun 03:05]
-   :LOGBOOK:
-   - State "DONE"       from "TODO"       [2019-03-03 Sun 03:05]
-   :END:
-** TODO The train and eval functions are expected to return a metric_container which will be logged in both normal and mlflow
+** DONE The train and eval functions are expected to return a metric_container which will be logged in both normal and mlflow
+   CLOSED: [2019-03-03 Sun 16:33]
    - The training output will not be logged by mlflow. Only the eval outputs will be logged, since that is what we want to look at. If someone want the train output they'd have to log it during the run.
 ** TODO The UI will be launched along side the pipeline. Also allow to launch the ui separately through the mlpipeline.
 ** TODO The version will log the values passed through it as parameters of the run
