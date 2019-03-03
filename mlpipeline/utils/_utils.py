@@ -312,6 +312,8 @@ def copy_related_files(model, dst_dir):
     for file in model.__related_files:
         shutil.copy(file, dst_dir)
         log("\tCopied {}".format(file))
+        if use_mlflow and LOGGER.TEST_MODE:
+            mlflow.log_artifact(file)
     
 class Metric():
     def __init__(self,  track_average_epoc_count = 1):
