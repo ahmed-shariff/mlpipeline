@@ -19,8 +19,9 @@
 * TODO Rethink allow_delete_model_dir
 * TODO Rethink how the training time is recorded to ensure a model that ended up failing to train can be relaunched. Or is this even an good behaviour to have?
 * TODO Let the user override the checking-modified-time behaviour
-* TODO mlflow integration [3/6]                                         :1_9:
-** TODO Will be using the mlflow tracking interface
+* TODO mlflow integration [4/7]                                         :1_9:
+** DONE Will be using the mlflow tracking interface
+   CLOSED: [2019-03-03 Sun 20:12]
 ** DONE The experiment name will be the name of the script running [4/4]
 *** DONE A script being launched by the subprocess is to be considered an experiment
     CLOSED: [2019-03-03 Sun 02:49]
@@ -37,9 +38,11 @@
    CLOSED: [2019-03-03 Sun 16:33]
    - The training output will not be logged by mlflow. Only the eval outputs will be logged, since that is what we want to look at. If someone want the train output they'd have to log it during the run.
 ** TODO The UI will be launched along side the pipeline. Also allow to launch the ui separately through the mlpipeline.
+** TODO The files copied will also be logged through the mlflow artifacts
 ** TODO The version will log the values passed through it as parameters of the run
 * TODO tensorboardx integration                                         :1_9:
-* TODO Refactors [0/3]                                                  :1_10:
+* TODO Refactors [1/3]                                                 :1_10:
 ** TODO Rename model to experiment
-** TODO Versions use easydict
+** DONE Versions use easydict
+   CLOSED: [2019-03-03 Sun 21:03]
 ** TODO Reduce the dependencies on Versions.

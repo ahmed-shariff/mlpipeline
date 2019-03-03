@@ -82,138 +82,59 @@ log_special_tokens = EasyDict(
     MODEL_EVALED = "Model evaluation complete",
     SESSION_STARTED = "=====================ML-Pipeline session started",
     SESSION_ENDED = "=====================ML-Pipeline Session ended")
-    
+
 class Versions():
     '''
     The class that holds the paramter versions.
     Also prvodes helper functions to define and add new parameter versions.
     '''
-    order_index = 0
-    versions = {}
-    versions_defaults = {}
     def __init__(self,
-               learning_rate,
-               dataloader,
-               batch_size = None,
-               epoc_count = None,
-               model_dir_suffix = None,
-               order = None,
-               #
-               hooks = None,
-               #
-               use_all_classes = None,
-               classes_count = None,
-               classes_offset = None
-               ):
-        self.versions = {}
-        self.versions_defaults[version_parameters.LEARNING_RATE] = learning_rate
-        self.versions_defaults[version_parameters.DATALOADER] = dataloader
-        
-        if batch_size is None:
-            self.versions_defaults[version_parameters.BATCH_SIZE] = None
-        else:
-            self.versions_defaults[version_parameters.BATCH_SIZE] = batch_size
-      
-        if epoc_count is None:
-            self.versions_defaults[version_parameters.EPOC_COUNT] = None
-        else:
-            self.versions_defaults[version_parameters.EPOC_COUNT] = epoc_count
+                 dataloader,
+                 batch_size,
+                 epoc_count,
+                 **kwargs):
+        self._default_values = EasyDict(dataloader = dataloader,
+                                        batch_size = batch_size,
+                                        epoc_count = epoc_count,
+                                        **kwargs)
+        self._order_index = 0
+        self._versions = {}
 
-        if model_dir_suffix is None:
-            self.versions_defaults[version_parameters.MODEL_DIR_SUFFIX] = None
-        else:
-            self.versions_defaults[version_parameters.MODEL_DIR_SUFFIX] = model_dir_suffix
-            
-        self.versions_defaults[version_parameters.ORDER] = order
-    #
-    # if hooks is None:
-    #   self.versions_defaults[version_parameters.HOOKS] = NoneHOOKS
-    # else:
-        self.versions_defaults[version_parameters.HOOKS] = hooks
-            
-            
-        if use_all_classes is None:
-            self.versions_defaults[version_parameters.USE_ALL_CLASSES] = None
-        else:
-            self.versions_defaults[version_parameters.USE_ALL_CLASSES] = use_all_classes
-
-        if classes_offset is None:
-            self.versions_defaults[version_parameters.CLASSES_OFFSET] = None
-        else:
-            self.versions_defaults[version_parameters.CLASSES_OFFSET] = classes_offset
-
-        if classes_count is None:
-            self.versions_defaults[version_parameters.CLASSES_COUNT] = None
-        else:
-            self.versions_defaults[version_parameters.CLASSES_COUNT] = classes_count
-
-    def addV(self,
-             name,
-             dataloader = None,
-             batch_size = None,
-             epoc_count = None,
-             learning_rate = None,
-             model_dir_suffix = None,
-             order = None,
-             custom_paramters={},
-             #
-             hooks = None,
-             use_all_classes = None,
-             classes_count = None,
-             classes_offset = None):
-
-        if dataloader is None:
-            dataloader = self.versions_defaults[version_parameters.DATALOADER]
-        if batch_size is None:
-            batch_size = self.versions_defaults[version_parameters.BATCH_SIZE]
-        if epoc_count is None:
-            epoc_count = self.versions_defaults[version_parameters.EPOC_COUNT]
-        if learning_rate is None:
-            learning_rate = self.versions_defaults[version_parameters.LEARNING_RATE]
-        if model_dir_suffix is None:
-            model_dir_suffix = self.versions_defaults[version_parameters.MODEL_DIR_SUFFIX]
+    def add_version(self,
+                    name,
+                    dataloader = None,
+                    batch_size = None,
+                    epoc_count = None,
+                    model_dir_suffix = None,
+                    order = None,
+                    custom_paramters = {},
+                    **kwargs):
+        v = EasyDict()
+        v.update(kwargs)
+        v.update(custom_paramters)
+        v.dataloader = self._default_values.dataloader if dataloader is None else dataloader
+        v.batch_size = self._default_values.batch_size if batch_size is None else batch_size
+        v.epoc_count = self._default_values.epoc_count if epoc_count is None else epoc_count
         if order is None:
-            order = self.versions_defaults[version_parameters.ORDER]
-      
-        
-        if hooks is None:
-            hooks = self.versions_defaults[version_parameters.HOOKS]
-    
-        if use_all_classes is None:
-            use_all_classes = self.versions_defaults[version_parameters.USE_ALL_CLASSES]
-        if classes_count is None:
-            classes_count = self.versions_defaults[version_parameters.CLASSES_COUNT]
-        if classes_offset is None:
-            classes_offset = self.versions_defaults[version_parameters.CLASSES_OFFSET]
-
-        self.versions[name] = {}
-        self.versions[name][version_parameters.NAME] = name
-        self.versions[name][version_parameters.DATALOADER] = dataloader
-        self.versions[name][version_parameters.BATCH_SIZE] = batch_size
-        self.versions[name][version_parameters.EPOC_COUNT] = epoc_count
-        self.versions[name][version_parameters.LEARNING_RATE] = learning_rate
-        self.versions[name][version_parameters.MODEL_DIR_SUFFIX] = model_dir_suffix
-    
-        self.versions[name][version_parameters.HOOKS] = hooks
-    #
-        self.versions[name][version_parameters.USE_ALL_CLASSES] = use_all_classes
-        self.versions[name][version_parameters.CLASSES_COUNT] = classes_count
-        self.versions[name][version_parameters.CLASSES_OFFSET] = classes_offset
-
-        if order is None:
-            self.versions[name][version_parameters.ORDER] = self.order_index
-            self.order_index += 1
+            v.order = self._order_index
+            self._order_index += 1
         else:
-            self.versions[name][version_parameters.ORDER] = order
-    
-        for k,v in custom_paramters.items():
-            self.versions[name][k] = v
-      
+            v.order = order
+        v.model_dir_suffix = model_dir_suffix
+        self._versions[name] = v
+
+    def get_version(self, version_name):
+        try:
+            return self._versions[version_name]
+        except KeyError:
+            raise ValueError("Version name '{0}' not found".format(version_name))
+
     def rangeOnParameters(self,
                           names=None,
                           combining_parameters = [],
                           parameters = {}):
         '''
+        **Experimental**
         Allows to deifine versions by providing a range(i.e. list) of values. The names of the paramters for which range is provided should be procided by combination_parmters. The values should be provided through the paramteres dictionary. The dictionaries keys are the same as that used for the versions as well as the combining_parameters parameter. Combinations of the values of the paramters specified in combining_parameters taken from the paramters dict will be used to generate versions. Parameters in the parameters dict which are not given in combining_paramters, will be used for all the combinations produced. Prameters not specified in paramteres dict will use the default values defined.
 
 Example:
@@ -245,27 +166,22 @@ The combinations by the above call would be:
                 parameters[key] = [parameters[key]]
 
         products = [parameters[parameter] if isinstance(parameters[parameter], list) else [parameters[parameter]] for paramter in combining_parameters]
+
         if names is None:
             names = [_genName() for _ in products]
         elif len(products) != len(names):
             raise ValueError("length of names shoul be {0}, to match the number of products generated".format(len(products)))
+        
         for idx, combination in enumerate(product(*products)):
-            self.addV(names[idx])
+            self.add_version(names[idx])
             parameters_temp = parameters.copy()
             for idx, parameter in combining_parameters:
                 parameters_temp[parameter] = combination[idx]
-            version = self.getVersion(names[idx])
+                
+            version = self.get_version(names[idx])
             for k,v in parameters_temp.items():
-                version.parameters[k] = v
-          
-    def getVersion(self, version_name):
-        #for v in self.versions:
-        #  if v.name == version_name:
-        try:
-            return self.versions[version_name]
-        except KeyError:
-            raise ValueError("Version name '{0}' not found".format(version_name))
-
+                version[k] = v
+            
 class VersionLog():
     '''
     used to maintain model version information.

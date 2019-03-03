@@ -89,7 +89,7 @@ class TestingModel(Model):
         return metrics
 
 dl = TestingDataLoader()
-v = Versions(0.01, dl, 1, 10)
-v.addV("version1", custom_paramters = {"hyperparameter": "a hyperparameter"})
-v.addV("version2", custom_paramters = {"hyperparameter": None})
+v = Versions(dl, 1, 10,learning_rate = 0.01)
+v.add_version("version1", hyperparameter = "a hyperparameter")
+v.add_version("version2", custom_paramters = {"hyperparameter": None})
 MODEL = TestingModel(versions = v)

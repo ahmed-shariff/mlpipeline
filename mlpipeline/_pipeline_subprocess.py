@@ -60,7 +60,7 @@ def _main(file_path):
 	    modifier_1 = console_colors.BOLD,
 	    modifier_2 = console_colors.GREEN_FG)
       
-    version_spec = current_model.versions.getVersion(version_name)
+    version_spec = current_model.versions.get_version(version_name)
       
     batch_size = version_spec[version_parameters.BATCH_SIZE]
     model_dir_suffix = version_spec[version_parameters.MODEL_DIR_SUFFIX]
@@ -74,11 +74,11 @@ def _main(file_path):
         shutil.rmtree(model_dir, ignore_errors=True)
     else:
         record_training = True
-        model_dir_suffix = "-" + model_dir_suffix if model_dir_suffix is not None else ""
+        model_dir_suffix = "-" + model_dir_suffix if model_dir_suffix is not None else version_name
         output_dir = "{}/outputs".format(MODELS_DIR.rstrip("/"))
         model_dir="{}/model_ckpts/{}{}".format(output_dir,
                                                current_model.name.split(".")[-2],
-					       model_dir_suffix)
+                                               model_dir_suffix)
         if use_mlflow:
             tracking_uri = os.path.abspath("{}/{}".format(output_dir, "mlruns"))
             mlflow.set_tracking_uri(tracking_uri)
@@ -277,7 +277,7 @@ def _get_model(file_path, just_return_model=False):
     ## If there are no training sessions to be resumed, decide which version to execute next based on the ORDER set in the version
     if returning_version is None:
         #TODO: check if this line works:
-        for v,k in sorted(versions.versions.items(), key=lambda x:x[1][version_parameters.ORDER]):
+        for v,k in sorted(versions._versions.items(), key=lambda x:x[1][version_parameters.ORDER]):
             if EXECUTED_MODELS[model.name][version].executed(v) is not VersionLog.EXECUTED:
                 returning_version = v
                 clean_model_dir = True
