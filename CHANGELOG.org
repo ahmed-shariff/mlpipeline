@@ -1,0 +1,14 @@
+* Change-log
+** 1.1a3.post8 [2019-03-04]
+- Major refactor: renamed model to experiment.
+- Functions to track and copy files imported by the experiment scripts.
+- All files imported by an experiment script and the experiment script itself will be copied to the `experiment_dir` directory
+- Removed the use_history feature for now.
+  - It seems to be buggy.
+- [[https://github.com/mlflow/mlflow][Mlflow]] integration.
+  - If mlflow exists and use_mlflow is not set to `False`:
+    - All mlflow related data will be stored in the outputs/mlrun directory
+    - Each experiment script is considered a mlflow-experiment.
+    - Each version executed form the experiment is considered a mlflow-run of the respective experiment.
+    - The Matric.log_matrics will log all the metrics to mlflow also.
+    - All the parameters passed through the version will be logged as parameters by mlflow.
