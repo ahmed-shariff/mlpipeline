@@ -42,8 +42,9 @@
    CLOSED: [2019-03-03 Sun 21:10]
 ** TODO The version will log the values passed through it as parameters of the run
 * TODO tensorboardx integration                                         :1_9:
-* TODO Refactors [1/3]                                                 :1_10:
-** TODO Rename model to experiment
+* TODO Refactors [2/3]                                                 :1_10:
+** DONE Rename model to experiment
+   CLOSED: [2019-03-04 Mon 13:26]
 ** DONE Versions use easydict
    CLOSED: [2019-03-03 Sun 21:03]
 ** TODO Reduce the dependencies on Versions.

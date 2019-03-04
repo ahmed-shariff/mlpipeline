@@ -11,7 +11,7 @@ from mlpipeline.utils import add_script_dir_to_PATH
 from mlpipeline.utils import ExecutionModeKeys
 from mlpipeline.utils import Versions
 from mlpipeline.utils import MetricContainer
-from mlpipeline.helper import Model
+from mlpipeline.helper import Experiment
 from mlpipeline.helper import DataLoader
 
 
@@ -39,13 +39,13 @@ class TestingDataLoader(DataLoader):
         return lambda:"got input form test input function"
   
   
-class TestingModel(Model):
+class TestingExperiment(Experiment):
     def __init__(self, versions, **args):
         super().__init__(versions, **args)
         self.model = An_ML_Model()
     
 
-    def pre_execution_hook(self, version, model_dir, exec_mode=ExecutionModeKeys.TEST):
+    def pre_execution_hook(self, version, experiment_dir, exec_mode=ExecutionModeKeys.TEST):
         self.log("Pre execution")
         self.log("Version spec: {}".format(version))
         self.model.hyperparameter = version["hyperparameter"]
@@ -57,7 +57,7 @@ class TestingModel(Model):
     def get_trained_step_count(self):
         return 10
 
-    def train_model(self, input_fn, steps):
+    def train_loop(self, input_fn, steps):
         metric_container = MetricContainer(metrics =  ['1', 'b', 'c'], track_average_epoc_count = 5)
         metric_container = MetricContainer(metrics = [{'metrics': ['a', 'b', 'c']}, {'metrics': ['2', 'd', 'e'], 'track_average_epoc_count': 10}], track_average_epoc_count = 5)
         self.log("steps: {}".format(steps))
@@ -77,9 +77,9 @@ class TestingModel(Model):
             metric_container.reset_epoc()
         metric_container.log_metrics()
         self.log("trained: {}".format(self.model.train()))
-        self.copy_related_files("models/exports")
+        self.copy_related_files("experiments/exports")
 
-    def evaluate_model(self, input_fn, steps):
+    def evaluate_loop(self, input_fn, steps):
         self.log("steps: {}".format(steps))
         self.log("calling input fn")
         input_fn()
@@ -92,4 +92,4 @@ dl = TestingDataLoader()
 v = Versions(dl, 1, 10,learning_rate = 0.01)
 v.add_version("version1", hyperparameter = "a hyperparameter")
 v.add_version("version2", custom_paramters = {"hyperparameter": None})
-MODEL = TestingModel(versions = v)
+EXPERIMENT = TestingExperiment(versions = v)

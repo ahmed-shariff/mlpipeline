@@ -22,7 +22,7 @@ LOGGER = None
 
 class ModeKeys():
     '''
-    Enum class that defines the keys to use in the models
+    Enum class that defines the keys to use in the experimentss
     '''
     TRAIN = "Train"
     PREDICT = "Predict"
@@ -65,23 +65,23 @@ class version_parameters():
     BATCH_SIZE = "batch_size"
     EPOC_COUNT = "epoc_count"
     LEARNING_RATE = "learning_rate"
-    MODEL_DIR_SUFFIX = "model_dir_suffix"
+    EXPERIMENT_DIR_SUFFIX = "experiment_dir_suffix"
     ORDER = "order"
   
-    #the rest are not needed for model is general, just mine 
+    #the rest are not needed for experiment is general, just mine 
     HOOKS = "hooks"
     CLASSES_COUNT = "classes_count"
     CLASSES_OFFSET = "classes_offset"
     USE_ALL_CLASSES = "use_all_classes"
 
         
-log_special_tokens = EasyDict(
-    MODE_RUNNING = "RUNNING MODEL TRAINING",
-    MODE_TESTING = "TESTING",
-    MODEL_TRAINED = "Model trained",
-    MODEL_EVALED = "Model evaluation complete",
-    SESSION_STARTED = "=====================ML-Pipeline session started",
-    SESSION_ENDED = "=====================ML-Pipeline Session ended")
+class log_special_tokens(EasyDict):
+    MODE_RUNNING = "RUNNING"
+    MODE_TESTING = "TESTING"
+    TRAINING_COMPLETE = "Training loop complete"
+    EVALUATION_COMPLETE = "Evaluation loop complete"
+    SESSION_STARTED = "=====================ML-Pipeline session started"
+    SESSION_ENDED = "=====================ML-Pipeline Session ended"
 
 class Versions():
     '''
@@ -105,7 +105,7 @@ class Versions():
                     dataloader = None,
                     batch_size = None,
                     epoc_count = None,
-                    model_dir_suffix = None,
+                    experiment_dir_suffix = None,
                     order = None,
                     custom_paramters = {},
                     **kwargs):
@@ -120,7 +120,7 @@ class Versions():
             self._order_index += 1
         else:
             v.order = order
-        v.model_dir_suffix = model_dir_suffix
+        v.experiment_dir_suffix = experiment_dir_suffix
         self._versions[name] = v
 
     def get_version(self, version_name):
@@ -138,28 +138,28 @@ class Versions():
         Allows to deifine versions by providing a range(i.e. list) of values. The names of the paramters for which range is provided should be procided by combination_parmters. The values should be provided through the paramteres dictionary. The dictionaries keys are the same as that used for the versions as well as the combining_parameters parameter. Combinations of the values of the paramters specified in combining_parameters taken from the paramters dict will be used to generate versions. Parameters in the parameters dict which are not given in combining_paramters, will be used for all the combinations produced. Prameters not specified in paramteres dict will use the default values defined.
 
 Example:
-rangeOnParameters(combining_paramters = [version_parameters.LEARNING_RATE, 'model_specific_param1'],
+rangeOnParameters(combining_paramters = [version_parameters.LEARNING_RATE, 'experiment_specific_param1'],
                   paramters = {version_parameters.LEARNING_RATE = [0.005, 0.001], 
-                               'model_specific_param1' = [1,2],
+                               'experiment_specific_param1' = [1,2],
                                version_parameters.BATCH_SIZE = 100,
-                               'model_specific_param2' = 0.1}
+                               'experiment_specific_param2' = 0.1}
 The combinations by the above call would be:
     {version_parameters.LEARNING_RATE = 0.005, 
-     'model_specific_param1' = 1,
+     'experiment_specific_param1' = 1,
      version_parameters.BATCH_SIZE = 100,
-     'model_specific_param2' = 0.1},
+     'experiment_specific_param2' = 0.1},
     {version_parameters.LEARNING_RATE = 0.005, 
-     'model_specific_param1' = 2,
+     'experiment_specific_param1' = 2,
      version_parameters.BATCH_SIZE = 100,
-     'model_specific_param2' = 0.1},
+     'experiment_specific_param2' = 0.1},
     {version_parameters.LEARNING_RATE = 0.001, 
-     'model_specific_param1' = 1,
+     'experiment_specific_param1' = 1,
      version_parameters.BATCH_SIZE = 100,
-     'model_specific_param2' = 0.1},
+     'experiment_specific_param2' = 0.1},
     {version_parameters.LEARNING_RATE = 0.001, 
-     'model_specific_param1' = 2,
+     'experiment_specific_param1' = 2,
      version_parameters.BATCH_SIZE = 100,
-     'model_specific_param2' = 0.1}
+     'experiment_specific_param2' = 0.1}
 '''
         for key in combining_parameters:
             if not isinstance(parameters[key], list):
@@ -184,7 +184,7 @@ The combinations by the above call would be:
             
 class VersionLog():
     '''
-    used to maintain model version information.
+    used to maintain experiment version information.
     '''
     #list of version names
     executed_versions=[]
@@ -286,7 +286,7 @@ def add_script_dir_to_PATH(current_dir = None):
 
     log("Added dir `{}` to PYTHOAPATH. New PYTHONPATH: {}".format(current_dir, sys.path))
 
-def _collect_related_files(model, root, additional_files = []):
+def _collect_related_files(experiment, root, additional_files = []):
     assert isinstance(additional_files, list)
     modules_list = additional_files
     root = os.path.abspath(root)
@@ -299,9 +299,9 @@ def _collect_related_files(model, root, additional_files = []):
                 pass
         except:
             pass
-    model.__related_files = modules_list
+    experiment.__related_files = modules_list
 
-def copy_related_files(model, dst_dir):
+def copy_related_files(experiment, dst_dir):
     try:
         os.makedirs(dst_dir)
         log("Created directories(s): {}".format(dst_dir))
@@ -309,7 +309,7 @@ def copy_related_files(model, dst_dir):
         pass
     assert os.path.isdir(dst_dir)
     log("Copying imported custom scripts to {}".format(dst_dir))
-    for file in model.__related_files:
+    for file in experiment.__related_files:
         shutil.copy(file, dst_dir)
         log("\tCopied {}".format(file))
         if use_mlflow and LOGGER.TEST_MODE:

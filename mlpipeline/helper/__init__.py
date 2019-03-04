@@ -1,4 +1,4 @@
-from mlpipeline.helper._helper import Model
+from mlpipeline.helper._helper import Experiment
 from mlpipeline.helper._helper import DataLoader
 
-__all__ = [Model, DataLoader]
+__all__ = [Experiment, DataLoader]
