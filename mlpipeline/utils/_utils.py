@@ -312,7 +312,7 @@ def copy_related_files(experiment, dst_dir):
     for file in experiment.__related_files:
         shutil.copy(file, dst_dir)
         log("\tCopied {}".format(file))
-        if use_mlflow and LOGGER.TEST_MODE:
+        if use_mlflow and not LOGGER.TEST_MODE:
             mlflow.log_artifact(file)
     
 class Metric():

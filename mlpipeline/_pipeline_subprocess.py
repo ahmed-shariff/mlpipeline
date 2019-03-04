@@ -96,6 +96,10 @@ def _main(file_path):
                 for run_uuid in run_uuids:
                     mlflow_client.delete_run(run_uuid)
             mlflow.start_run(run_name = version_name, source_name = current_experiment.name)
+
+            # Logging the versions params
+            for k,v in version_spec.items():
+                mlflow.log_param(k,str(v))
     
     eval_complete=False
     #LOGGER.setLevel(logging.INFO)
