@@ -20,18 +20,18 @@ except ImportError:
 
 LOGGER = None
 
-class ModeKeys():
+class _experimentModeKeys():
     '''
-    Enum class that defines the keys to use in the experimentss
-    '''
-    TRAIN = "Train"
-    PREDICT = "Predict"
-    EVALUATE = "Evaluate"
+    Enum class that defines the keys to use to specify the execution mode of the experiment
+'''
+    RUN = 'Run'
+    TEST = 'Test'
+    EXPORT = 'Export'
 
 
 class ExecutionModeKeys():
     '''
-    Enum class that defines the keys to use to specify the execution mode of the pipeline
+    Enum class that defines the keys to use to specify the execution mode the pipeline is currently at.
 '''
     TRAIN = 'Train'
     TEST = 'Test'
@@ -78,6 +78,7 @@ class version_parameters():
 class log_special_tokens(EasyDict):
     MODE_RUNNING = "RUNNING"
     MODE_TESTING = "TESTING"
+    MODE_EXPORTING = "EXPORTING"
     TRAINING_COMPLETE = "Training loop complete"
     EVALUATION_COMPLETE = "Evaluation loop complete"
     SESSION_STARTED = "=====================ML-Pipeline session started"
@@ -225,7 +226,7 @@ class VersionLog():
         self.executing_version=None
         self.executing_v_time=0.0
         
-def set_logger(test_mode = True, no_log = True, log_file = None):
+def set_logger(experiment_mode = _experimentModeKeys.TEST, no_log = True, log_file = None):
     global LOGGER
     formatter = logging.Formatter(fmt= "%(asctime)s:{0}{1}%(levelname)s:{2}%(name)s{3}- %(message)s" \
                                   .format(console_colors.BOLD,
@@ -241,7 +242,7 @@ def set_logger(test_mode = True, no_log = True, log_file = None):
     handler.setFormatter(formatter)
     handler.setLevel(logging.INFO)
     LOGGER.addHandler(handler)
-    LOGGER.TEST_MODE = test_mode
+    LOGGER.EXPERIMENT_MODE = experiment_mode
     LOGGER.NO_LOG = no_log
     LOGGER.LOG_FILE = log_file
     return LOGGER
@@ -270,8 +271,8 @@ def log(message, level = logging.INFO, log_to_file=True, modifier_1=None, modifi
         set_logger()
         self.log("'set_logger' not called. Setting up Logger with default settings. To override, call 'set_logger' before any calls to 'log'", level = logging.WARN, modifier_1 = console_colors.RED_FG)
     LOGGER.log(level, message)
-    #TEST_MODE and NO_LOG will be set in the pipline subprocess script
-    if not LOGGER.TEST_MODE and not LOGGER.NO_LOG and log_to_file:
+    #EXPERIMENT_MODE and NO_LOG will be set in the pipline subprocess script
+    if LOGGER.EXPERIMENT_MODE != _experimentModeKeys.TEST and not LOGGER.NO_LOG and log_to_file:
         with open(LOGGER.LOG_FILE, 'a', encoding="utf-8") as log_file:
             level = ["INFO" if level is logging.INFO else "ERROR"]
             time = datetime.now().isoformat()
@@ -312,7 +313,7 @@ def copy_related_files(experiment, dst_dir):
     for file in experiment.__related_files:
         shutil.copy(file, dst_dir)
         log("\tCopied {}".format(file))
-        if use_mlflow and not LOGGER.TEST_MODE:
+        if use_mlflow and LOGGER.EXPERIMENT_MODE != _experimentModeKeys.TEST:
             mlflow.log_artifact(file)
     
 class Metric():
@@ -465,8 +466,8 @@ class MetricContainer(EasyDict):
                 value = metric.avg()
                 
             s = "{}: {:.4f}    ".format(name, value)
-            # TEST_MODE is set in the pipeline subprocess script
-            if use_mlflow and log_to_file and not LOGGER.TEST_MODE:
+            # EXPERIMENT_MODE is set in the pipeline subprocess script
+            if use_mlflow and log_to_file and LOGGER.EXPERIMENT_MODE != _experimentModeKeys.TEST:
                 mlflow.log_metric(name, value)
             row_char_count += len(s)
             if row_char_count > charachters_per_row:

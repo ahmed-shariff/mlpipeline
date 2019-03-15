@@ -29,13 +29,20 @@ class Experiment():
         self.reset_steps = reset_steps
 
     
-    #TODO: Does the exec_mode have to be here?
+    # TODO: Does the exec_mode have to be here?
     def pre_execution_hook(self, version, experiment_dir, exec_mode=ExecutionModeKeys.TEST):
         '''
         Before execution, this method will be called to set the version obtained from `self.versions`. Also `experiment_dir` will provide the destination to save the experiment in as specified in the config file. The exec_mode will be passed, with on of the keys as specified in `ExecutionModeKeys`. This function can be used to define the experiment's hyperparameters based on the information of the version being executed duering an iteration. This method will be once called before `train_loop` for each version. 
         '''
         raise NotImplementedError
-  
+
+    
+    def setup_model(self,version):
+        '''
+        This function will be called right after the pre_execution_hook. It expects to set the 'self.model' of the Experiment class here. This will be callaed before the train_loop function and the 'export_model' menthods
+'''
+        raise NotImplementedError()
+    
     def train_loop(self, input_fn, steps):
         '''
 This will be called when the experiment is entering the traning phase. Ideally, what needs to happen in this function is to use the `input_fn` and execute the training loop for a given number of steps which will be passed through `steps`. The input_fn passed here will be the object returned by the `get_train_input` method of the dataloader. In addition, other functionalities can be included here as well, such as saving the experiment parameters during training, etc. Th return value of the method will be logged.
@@ -48,6 +55,12 @@ This will be called when the experiment is entering the testing phase following 
 '''
         raise NotImplementedError
 
+    def export_model(self):
+        '''
+        This method is called when a model is called with the export settings. Either by setting the respecitve command line argument or passing the export parameter in the versions.
+'''
+        raise NotImplementedError()
+    
     def get_current_version(self):
         '''
 This function should return a dict, which represents the current version.

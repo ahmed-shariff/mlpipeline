@@ -41,7 +41,8 @@
 ** DONE The files copied will also be logged through the mlflow artifacts
    CLOSED: [2019-03-03 Sun 21:10]
 ** DONE The version will log the values passed through it as parameters of the run
-   CLOSED: [2019-03-04 Mon 14:21]
+   CLOSED: [2019-03-04 Mon 14:21]\
+** TODO Tag if a model is in being trained or finished training.
 * TODO tensorboardx integration                                         :1_9:
 * TODO Refactors [2/3]                                                 :1_10:
 ** DONE Rename model to experiment
@@ -49,3 +50,5 @@
 ** DONE Versions use easydict
    CLOSED: [2019-03-03 Sun 21:03]
 ** TODO Reduce the dependencies on Versions.
+* TODO Add a separate export mode                                       :1_9:
+  - When in this mode, it will execute the `export_model` method for all the experiments for all versions.
