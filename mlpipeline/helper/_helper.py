@@ -1,6 +1,5 @@
 from mlpipeline.utils import Versions
 from mlpipeline.utils import ExecutionModeKeys
-from mlpipeline.utils import ModeKeys
 from mlpipeline.utils import log
 from mlpipeline.utils import console_colors
 from mlpipeline.utils import copy_related_files
@@ -39,7 +38,7 @@ class Experiment():
     
     def setup_model(self,version):
         '''
-        This function will be called right after the pre_execution_hook. It expects to set the 'self.model' of the Experiment class here. This will be callaed before the train_loop function and the 'export_model' methods. The current version spec will passed to this method.
+        This function will be called before the 'export_model' and 'pre_execution_hook'. It expects to set the 'self.model' of the Experiment class here. This will be callaed before the train_loop function and the 'export_model' methods. The current version spec will passed to this method.
 '''
         raise NotImplementedError()
     
@@ -60,12 +59,6 @@ This will be called when the experiment is entering the testing phase following 
         This method is called when a model is called with the export settings. Either by setting the respecitve command line argument or passing the export parameter in the versions.
 '''
         raise NotImplementedError()
-    
-    def get_current_version(self):
-        '''
-This function should return a dict, which represents the current version.
-'''
-        raise NotImplementedError
 
     def get_trained_step_count(self):
         '''
@@ -110,7 +103,7 @@ class DataLoader():
   # This function will be called before the execution of a specific verion of a experiment. This function can be used to modify the data provided by dataloader based in the needs of the version of the experiment being executed. 
   # '''
   #       raise NotImplementedError
-    def get_train_input(self, mode= ModeKeys.TRAIN, **kargs):
+    def get_train_input(self, mode= ExecutionModeKeys.TRAIN, **kargs):
         '''
         This function returns an object which will be passed to the `Experiment.train_loop` when executing the training function of the experiment, the same function will be used for evaluation following training using `Experiment.evaluate_loop` . The the object returned by this function would depend on the how the return function will be used in the experiment. (eg: for Tensorflow models the returnn value can be a function object, for pyTorch it can be a Dataset object. In both cases the output of this function will be providing the data used for training)
 '''
