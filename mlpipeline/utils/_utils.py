@@ -227,6 +227,7 @@ class VersionLog():
         
 def set_logger(test_mode = True, no_log = True, log_file = None):
     global LOGGER
+    global use_mlflow
     formatter = logging.Formatter(fmt= "%(asctime)s:{0}{1}%(levelname)s:{2}%(name)s{3}- %(message)s" \
                                   .format(console_colors.BOLD,
                                           console_colors.BLUE_FG,
@@ -242,6 +243,7 @@ def set_logger(test_mode = True, no_log = True, log_file = None):
     handler.setLevel(logging.INFO)
     LOGGER.addHandler(handler)
     LOGGER.TEST_MODE = test_mode
+    use_mlflow = not test_mode
     LOGGER.NO_LOG = no_log
     LOGGER.LOG_FILE = log_file
     return LOGGER
