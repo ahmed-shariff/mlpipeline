@@ -310,10 +310,13 @@ def copy_related_files(experiment, dst_dir):
     assert os.path.isdir(dst_dir)
     log("Copying imported custom scripts to {}".format(dst_dir))
     for file in experiment.__related_files:
-        shutil.copy(file, dst_dir)
-        log("\tCopied {}".format(file))
-        if use_mlflow and not LOGGER.TEST_MODE:
-            mlflow.log_artifact(file)
+        if LOGGER.TEST_MODE:
+            log("Not copying in TEST mode: file - {}".format(file))
+        else:
+            shutil.copy(file, dst_dir)
+            log("\tCopied {}".format(file))
+            if use_mlflow:
+                mlflow.log_artifact(file)
     
 class Metric():
     def __init__(self,  track_average_epoc_count = 1):
