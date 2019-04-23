@@ -41,21 +41,19 @@ class TestingDataLoader(DataLoaderABC):
 class TestingExperiment(ExperimentABC):
     def __init__(self, versions, **args):
         super().__init__(versions, **args)
+
+    def setup_model(self, version):
         self.model = An_ML_Model()
-    
+        self.model.hyperparameter = version["hyperparameter"]
+        
     def pre_execution_hook(self, version, experiment_dir, exec_mode=ExecutionModeKeys.TEST):
         self.log("Pre execution")
         self.log("Version spec: {}".format(version))
-        self.model.hyperparameter = version["hyperparameter"]
-        self.current_version = version
-
-    def get_current_version(self):
-        return self.current_version
-
+        
     def get_trained_step_count(self):
         return 10
 
-    def train_loop(self, input_fn, steps):
+    def train_loop(self, input_fn, steps, version):
         metric_container = MetricContainer(metrics =  ['1', 'b', 'c'], track_average_epoc_count = 5)
         metric_container = MetricContainer(metrics = [{'metrics': ['a', 'b', 'c']}, {'metrics': ['2', 'd', 'e'], 'track_average_epoc_count': 10}], track_average_epoc_count = 5)
         self.log("steps: {}".format(steps))
@@ -77,7 +75,7 @@ class TestingExperiment(ExperimentABC):
         self.log("trained: {}".format(self.model.train()))
         self.copy_related_files("experiments/exports")
 
-    def evaluate_loop(self, input_fn, steps):
+    def evaluate_loop(self, input_fn, steps, version):
         self.log("steps: {}".format(steps))
         self.log("calling input fn")
         input_fn()
@@ -85,6 +83,9 @@ class TestingExperiment(ExperimentABC):
         metrics.a.update(10,1)
         metrics.b.update(2,1)
         return metrics
+
+    def export_model(self, version):
+        self.log("YAY! Exported!")
 
 dl = TestingDataLoader()
 v = Versions(dl, 1, 10,learning_rate = 0.01)

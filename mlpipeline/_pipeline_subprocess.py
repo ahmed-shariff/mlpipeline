@@ -12,7 +12,8 @@ except ImportError:
     
 from datetime import datetime
 
-from mlpipeline.utils import (ExecutionModeKeys,
+from mlpipeline.utils import (_experimentModeKeys,
+                              ExecutionModeKeys,
                               version_parameters,
                               log_special_tokens,
                               _VersionLog,
@@ -28,7 +29,7 @@ from mlpipeline.global_values import (EXPERIMENTS_DIR,
                                       NO_LOG,
                                       EXECUTED_EXPERIMENTS,
                                       USE_BLACKLIST,
-                                      TEST_MODE,
+                                      EXPERIMENT_MODE,
                                       mtime,
                                       version,
                                       train_time,
@@ -63,171 +64,195 @@ class _ExecutedExperiment():
         return self._modified_time
         
 def _main(file_path):
-    current_experiment, version_name, clean_experiment_dir = _get_experiment(file_path)
+    current_experiment, version_name_s, clean_experiment_dir = _get_experiment(file_path)
     if current_experiment is None:
         sys.exit(3)
-    _add_to_and_return_result_string("Experiment: {0}".format(current_experiment.name), True)
-    _add_to_and_return_result_string("Version: {0}".format(version_name))
+
     log("Experiment loaded: {0}".format(current_experiment.name))
-    if version_name is None:
-        log("No Version Specifications",
-	    logging.WARNING,
-	    modifier_1 = console_colors.RED_FG,
-	    modifier_2 = console_colors.BOLD)
-    else:
-        log("version loaded: {0}".format(version_name),
-	  modifier_1 = console_colors.GREEN_FG,
-	  modifier_2 = console_colors.BOLD)
-      
-    #print("\033[1;32mMode: {0}\033[0m".format(modestring))
-    if TEST_MODE:
+    if EXPERIMENT_MODE == _experimentModeKeys.TEST:
         log("Mode: {}{}".format(console_colors.YELLOW_FG, log_special_tokens.MODE_TESTING),
 	    modifier_1 = console_colors.BOLD,
 	    modifier_2 = console_colors.GREEN_FG)
+    elif EXPERIMENT_MODE == _experimentModeKeys.EXPORT:
+        log("Mode: {}{}".format(console_colors.YELLOW_FG, log_special_tokens.MODE_EXPORTING),
+	    modifier_1 = console_colors.BOLD,
+	    modifier_2 = console_colors.MEGENTA_FG)
     else:
         log("Mode: {}{}".format(console_colors.RED_FG, log_special_tokens.MODE_RUNNING),
 	    modifier_1 = console_colors.BOLD,
 	    modifier_2 = console_colors.GREEN_FG)
-      
-    version_spec = current_experiment.versions.get_version(version_name)
-      
-    batch_size = version_spec[version_parameters.BATCH_SIZE]
-    experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
-    dataloader = version_spec[version_parameters.DATALOADER]
+        
+    if EXPERIMENT_MODE == _experimentModeKeys.EXPORT:
+        for version_name, version_spec in version_name_s.items():
+            experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
+            experiment_dir_suffix = "-" + experiment_dir_suffix if experiment_dir_suffix is not None else version_name
+            output_dir = "{}/outputs".format(EXPERIMENTS_DIR.rstrip("/"))
+            experiment_dir="{}/experiment_ckpts/{}{}".format(output_dir,
+                                                   current_experiment.name.split(".")[-2],
+                                                   experiment_dir_suffix)
 
-    log("Version_spec: {}".format(version_spec))
-    
-    if TEST_MODE:
-        record_training = False
-        experiment_dir = "{0}/outputs/experiment_ckpts/temp".format(EXPERIMENTS_DIR.rstrip("/"))
-        shutil.rmtree(experiment_dir, ignore_errors=True)
+            current_experiment.setup_model(version_spec)
+            log("Exporting model for version: {}".format(version_name))
+            current_experiment.export_model(version_spec)
+            log("Exported model {}".format(version_name))
+        sys.exit(3)
     else:
-        record_training = True
-        experiment_dir_suffix = "-" + experiment_dir_suffix if experiment_dir_suffix is not None else version_name
-        output_dir = "{}/outputs".format(EXPERIMENTS_DIR.rstrip("/"))
-        experiment_dir="{}/experiment_ckpts/{}{}".format(output_dir,
-                                               current_experiment.name.split(".")[-2],
-                                               experiment_dir_suffix)
-        if use_mlflow:
-            tracking_uri = os.path.abspath("{}/{}".format(output_dir, "mlruns"))
-            mlflow.set_tracking_uri(tracking_uri)
-            mlflow.set_experiment(current_experiment.name)
-            # Delete runs with the same name as the current version
-            mlflow_client = mlflow.tracking.MlflowClient(tracking_uri)
-            experiment_ids = [exp.experiment_id
-                          for exp in mlflow_client.list_experiments() if current_experiment.name == exp.name]
-            if len(experiment_ids) > 0:
-                run_infos = mlflow_client.list_run_infos(experiment_ids[0])
-                run_uuids = [run_info.run_uuid for run_info in run_infos \
-                             for run_tag in mlflow_client.get_run(run_info.run_uuid).data.tags \
-                             if run_tag.key == mlflow.utils.mlflow_tags.MLFLOW_RUN_NAME and run_tag.value == version_name]
-                for run_uuid in run_uuids:
-                    mlflow_client.delete_run(run_uuid)
-            mlflow.start_run(run_name = version_name, source_name = current_experiment.name)
-
-            # Logging the versions params
-            for k,v in version_spec.items():
-                mlflow.log_param(k,str(v))
-    
-    eval_complete=False
-    #LOGGER.setLevel(logging.INFO)
-
-    
-    train_results = ""
-    eval_results = ""
-    
-    try:
-        if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
-            current_experiment.clean_experiment_dir(experiment_dir)
-            log("Cleaned experiment dir", modifier_1 = console_colors.RED_FG)
-        current_experiment.pre_execution_hook(version_spec, experiment_dir)
-        os.makedirs(experiment_dir, exist_ok = True)
-        current_experiment.copy_related_files(experiment_dir)
-        if TEST_MODE:
-            test__eval_steps = 1
-            train_eval_steps = 1
+        version_name = version_name_s
+        _add_to_and_return_result_string("Experiment: {0}".format(current_experiment.name), True)
+        _add_to_and_return_result_string("Version: {0}".format(version_name))
+        if version_name is None:
+            log("No Version Specifications",
+                logging.WARNING,
+                modifier_1 = console_colors.RED_FG,
+                modifier_2 = console_colors.BOLD)
         else:
-            test__eval_steps = dataloader.get_test_sample_count()
-            train_eval_steps = dataloader.get_train_sample_count()
+            log("version loaded: {0}".format(version_name),
+              modifier_1 = console_colors.GREEN_FG,
+              modifier_2 = console_colors.BOLD)
+      
 
-        _save_training_time(current_experiment, version_name)
-        classification_steps = _get_training_steps(ExecutionModeKeys.TRAIN, current_experiment, clean_experiment_dir)
-        log("Steps: {0}".format(classification_steps))
-        if classification_steps > 0:
-            train_output = current_experiment.train_loop(dataloader.get_train_input(), classification_steps)
-            if isinstance(train_output, MetricContainer):
-                train_output = train_output.log_metrics(log_to_file = False, complete_epoc = True)
-            if isinstance(train_output, str):
-                log("Experiment traning loop output: {0}".format(train_output))
-            log(log_special_tokens.TRAINING_COMPLETE)
+        version_spec = current_experiment.versions.get_version(version_name)
+      
+        batch_size = version_spec[version_parameters.BATCH_SIZE]
+        experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
+        dataloader = version_spec[version_parameters.DATALOADER]
+
+        log("Version_spec: {}".format(version_spec))
+
+        record_training = False
+        if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+            experiment_dir = "{0}/outputs/experiment_ckpts/temp".format(EXPERIMENTS_DIR.rstrip("/"))
+            shutil.rmtree(experiment_dir, ignore_errors=True)
         else:
-            log("No training. Loaded previous experiment environment")
+            experiment_dir_suffix = "-" + experiment_dir_suffix if experiment_dir_suffix is not None else version_name
+            output_dir = "{}/outputs".format(EXPERIMENTS_DIR.rstrip("/"))
+            experiment_dir="{}/experiment_ckpts/{}{}".format(output_dir,
+                                                   current_experiment.name.split(".")[-2],
+                                                   experiment_dir_suffix)
+            record_training = True
+            if use_mlflow:
+                tracking_uri = os.path.abspath("{}/{}".format(output_dir, "mlruns"))
+                mlflow.set_tracking_uri(tracking_uri)
+                mlflow.set_experiment(current_experiment.name)
+                # Delete runs with the same name as the current version
+                mlflow_client = mlflow.tracking.MlflowClient(tracking_uri)
+                experiment_ids = [exp.experiment_id
+                              for exp in mlflow_client.list_experiments() if current_experiment.name == exp.name]
+                if len(experiment_ids) > 0:
+                    run_infos = mlflow_client.list_run_infos(experiment_ids[0])
+                    run_uuids = [run_info.run_uuid for run_info in run_infos \
+                                 for run_tag in mlflow_client.get_run(run_info.run_uuid).data.tags \
+                                 if run_tag.key == mlflow.utils.mlflow_tags.MLFLOW_RUN_NAME and run_tag.value == version_name]
+                    for run_uuid in run_uuids:
+                        mlflow_client.delete_run(run_uuid)
+                mlflow.start_run(run_name = version_name, source_name = current_experiment.name)
+
+                # Logging the versions params
+                for k,v in version_spec.items():
+                    mlflow.log_param(k,str(v))
+                
+        eval_complete=False
+        #LOGGER.setLevel(logging.INFO)
+
+
+        train_results = ""
+        eval_results = ""
 
         try:
-            log("Training evaluation started: {0} steps".format(train_eval_steps))
-            train_results = current_experiment.evaluate_loop(dataloader.get_train_input(mode = ExecutionModeKeys.TEST),
-                                                         steps = train_eval_steps)
-            log("Eval on train set: ")
-            if isinstance(train_results, MetricContainer):
-                train_results = train_results.log_metrics(complete_epoc = True, name_prefix = "TRAIN_")
-            elif isinstance(train_results, str):
-                log("{0}".format(train_results))
+            if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
+                current_experiment.clean_experiment_dir(experiment_dir)
+                log("Cleaned experiment dir", modifier_1 = console_colors.RED_FG)
+            current_experiment.pre_execution_hook(version_spec, experiment_dir)
+            current_experiment.setup_model(version_spec)
+            os.makedirs(experiment_dir, exist_ok = True)
+            current_experiment.copy_related_files(experiment_dir)
+            if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+                test__eval_steps = 1
+                train_eval_steps = 1
             else:
-                raise ValueError("The output of `evaluate_loop` should be a string or a `MetricContainer`")
-        except Exception as e:
-            train_results = "Training evaluation failed: {0}".format(str(e))
-            log(train_results, logging.ERROR)
-            if TEST_MODE:
-                raise
-            
-        try:
-            log("Testing evaluation started: {0} steps".format(test__eval_steps))
-            eval_results = current_experiment.evaluate_loop(dataloader.get_test_input(),
-						      steps = test__eval_steps)
-            log("Eval on train set:")
-            if isinstance(eval_results, MetricContainer):
-                eval_results = eval_results.log_metrics(complete_epoc = True, name_prefix = "TEST_")
-            elif isinstance(eval_results, str):
-                log("{0}".format(eval_results))
+                test__eval_steps = dataloader.get_test_sample_count()
+                train_eval_steps = dataloader.get_train_sample_count()
+
+            _save_training_time(current_experiment, version_name)
+            classification_steps = _get_training_steps(ExecutionModeKeys.TRAIN, current_experiment, clean_experiment_dir, version_spec)
+            log("Steps: {0}".format(classification_steps))
+            if classification_steps > 0:
+                train_output = current_experiment.train_loop(dataloader.get_train_input(), classification_steps, version_spec)
+                if isinstance(train_output, MetricContainer):
+                    train_output = train_output.log_metrics(log_to_file = False, complete_epoc = True)
+                if isinstance(train_output, str):
+                    log("Experiment traning loop output: {0}".format(train_output))
+                log(log_special_tokens.TRAINING_COMPLETE)
             else:
-                raise ValueError("The output of `evaluate_loop` should be a string or a `MetricContainer`")
+                log("No training. Loaded previous experiment environment")
+
+            try:
+                log("Training evaluation started: {0} steps".format(train_eval_steps))
+                train_results = current_experiment.evaluate_loop(dataloader.get_train_input(mode = ExecutionModeKeys.TEST),
+                                                                 steps = train_eval_steps,
+                                                                 version = version_spec)
+                log("Eval on train set: ")
+                if isinstance(train_results, MetricContainer):
+                    train_results = train_results.log_metrics(complete_epoc = True, name_prefix = "TRAIN_")
+                elif isinstance(train_results, str):
+                    log("{0}".format(train_results))
+                else:
+                    raise ValueError("The output of `evaluate_loop` should be a string or a `MetricContainer`")
+            except Exception as e:
+                train_results = "Training evaluation failed: {0}".format(str(e))
+                log(train_results, logging.ERROR)
+                if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+                    raise
+
+            try:
+                log("Testing evaluation started: {0} steps".format(test__eval_steps))
+                eval_results = current_experiment.evaluate_loop(dataloader.get_test_input(),
+                                                                steps = test__eval_steps,
+                                                                 version = version_spec)
+                log("Eval on train set:")
+                if isinstance(eval_results, MetricContainer):
+                    eval_results = eval_results.log_metrics(complete_epoc = True, name_prefix = "TEST_")
+                elif isinstance(eval_results, str):
+                    log("{0}".format(eval_results))
+                else:
+                    raise ValueError("The output of `evaluate_loop` should be a string or a `MetricContainer`")
+            except Exception as e:
+                eval_results = "Test evaluation failed: {0}".format(str(e))
+                log(eval_results, logging.ERROR)
+                if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+                    raise
+
+            log("Experiment evaluation complete")
+            _add_to_and_return_result_string("Eval on train set: {0}".format(train_results))
+            _add_to_and_return_result_string("Eval on test  set: {0}".format(eval_results))
+            _add_to_and_return_result_string("-------------------------------------------")
+            _add_to_and_return_result_string("EXECUTION SUMMERY:")
+            _add_to_and_return_result_string("Number of epocs: {0}".format(version_spec[version_parameters.EPOC_COUNT]))
+            _add_to_and_return_result_string("Parameters for this version: {0}".format(version_spec))
+            _add_to_and_return_result_string("-------------------------------------------")
+            _add_to_and_return_result_string("EXPERIMENT SUMMERY:")
+            _add_to_and_return_result_string(current_experiment.summery)
+            _add_to_and_return_result_string("-------------------------------------------")
+            _add_to_and_return_result_string("DATALOADER	 SUMMERY:")
+            _add_to_and_return_result_string(dataloader.summery)
+            if record_training and not NO_LOG:
+                _save_results_to_file(_add_to_and_return_result_string(), current_experiment)
+
         except Exception as e:
-            eval_results = "Test evaluation failed: {0}".format(str(e))
-            log(eval_results, logging.ERROR)
-            if TEST_MODE:
+            if EXPERIMENT_MODE == _experimentModeKeys.TEST:
                 raise
-
-        log("Experiment evaluation complete")
-        _add_to_and_return_result_string("Eval on train set: {0}".format(train_results))
-        _add_to_and_return_result_string("Eval on test  set: {0}".format(eval_results))
-        _add_to_and_return_result_string("-------------------------------------------")
-        _add_to_and_return_result_string("EXECUTION SUMMERY:")
-        _add_to_and_return_result_string("Number of epocs: {0}".format(version_spec[version_parameters.EPOC_COUNT]))
-        _add_to_and_return_result_string("Parameters for this version: {0}".format(version_spec))
-        _add_to_and_return_result_string("-------------------------------------------")
-        _add_to_and_return_result_string("EXPERIMENT SUMMERY:")
-        _add_to_and_return_result_string(current_experiment.summery)
-        _add_to_and_return_result_string("-------------------------------------------")
-        _add_to_and_return_result_string("DATALOADER	 SUMMERY:")
-        _add_to_and_return_result_string(dataloader.summery)
-        if record_training and not NO_LOG:
-            _save_results_to_file(_add_to_and_return_result_string(), current_experiment)
-
-    except Exception as e:
-        if TEST_MODE is True:
-            raise
-        else:
-            log("Exception: {0}".format(str(e)), logging.ERROR)
-            sys.exit(1)
-    if not TEST_MODE and use_mlflow:
-        mlflow.end_run()
+            else:
+                log("Exception: {0}".format(str(e)), logging.ERROR)
+                sys.exit(1)
+        if EXPERIMENT_MODE == _experimentModeKeys.RUN and use_mlflow:
+            mlflow.end_run()
 
     
-def _get_training_steps(mode, experiment, clean_experiment_dir):
-    if TEST_MODE:
+def _get_training_steps(mode, experiment, clean_experiment_dir, version_spec):
+    if EXPERIMENT_MODE == _experimentModeKeys.TEST:
         return 1
     else:
-        current_version = experiment.get_current_version()
+        current_version = version_spec
         complete_steps =  current_version[version_parameters.EPOC_COUNT] * \
             current_version[version_parameters.DATALOADER].get_train_sample_count() / \
             current_version[version_parameters.BATCH_SIZE]
@@ -274,6 +299,9 @@ def _get_experiment(file_path, just_return_experiment=False):
 						experiment.name,
 						console_colors.RESET))
 
+    if EXPERIMENT_MODE == _experimentModeKeys.EXPORT:
+        return experiment, {v:k for v,k in sorted(versions._versions.items(), key=lambda x:x[1][version_parameters.ORDER])}, False
+    
     ## Get the training history. i.e. the time stamps of each training launched
     with open(TRAINING_HISTORY_LOG_FILE, "r") as t_hist_file:
         t_history = [line.rstrip("\n") for line in t_hist_file]
@@ -333,7 +361,7 @@ def _add_to_and_return_result_string(message=None, reset_result_string = False, 
     return result_string
 
 def _save_training_time(experiment, version_):
-    if TEST_MODE:
+    if EXPERIMENT_MODE == _experimentModeKeys.TEST:
         return
     name = experiment.name
     with open(TRAINING_HISTORY_LOG_FILE, "a") as log_file:
@@ -369,9 +397,10 @@ def main():
     parser.add_argument('-r','--run', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true')
     parser.add_argument('-u','--use-history', help='If set will use the history log to determine if a experiment script has been executed.', action = 'store_true')
     parser.add_argument('-n','--no_log', help='If set non of the logs will be appended to the log files.', action = 'store_true')
+    parser.add_argument('-e','--export', help='If set, will run the experiment in export mode instead of training/eval loop.', action = 'store_true')
     argv = parser.parse_args()
     
-    global TEST_MODE
+    global EXPERIMENT_MODE
     global NO_LOG
     global LOGGER
     global EXPERIMENTS_DIR
@@ -379,7 +408,7 @@ def main():
     global LOG_FILE
     global OUTPUT_FILE
     global TRAINING_HISTORY_LOG_FILE
-
+    
     file_path = argv.file_path
     EXPERIMENTS_DIR = argv.experiments_dir
     
@@ -395,9 +424,11 @@ def main():
     open(LOG_FILE, "a").close()
 
     if argv.run:#any("r" in s for s in unused_argv) :
-        TEST_MODE = False
+        EXPERIMENT_MODE = _experimentModeKeys.RUN
+    elif argv.export:
+        EXPERIMENT_MODE = _experimentModeKeys.EXPORT
     else:
-        TEST_MODE = True
+        EXPERIMENT_MODE = _experimentModeKeys.TEST
 
     if True:#argv.use_history:#any("h" in s for s in unused_argv):
         if not os.path.isfile(HISTORY_FILE) and not os.path.isfile(TRAINING_HISTORY_LOG_FILE):
@@ -440,7 +471,7 @@ def main():
     else:
         NO_LOG = False
         
-    LOGGER = set_logger(test_mode = TEST_MODE, no_log = NO_LOG, log_file = LOG_FILE)
+    LOGGER = set_logger(experiment_mode = EXPERIMENT_MODE, no_log = NO_LOG, log_file = LOG_FILE)
     add_script_dir_to_PATH(EXPERIMENTS_DIR)
     _main(file_path)
     

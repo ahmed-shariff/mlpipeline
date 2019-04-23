@@ -1,6 +1,5 @@
 from mlpipeline.utils import Versions
 from mlpipeline.utils import ExecutionModeKeys
-from mlpipeline.utils import ModeKeys
 from mlpipeline.utils import log
 from mlpipeline.utils import console_colors
 from mlpipeline.utils import copy_related_files
@@ -29,30 +28,37 @@ class ExperimentABC():
         self.reset_steps = reset_steps
 
     
-    #TODO: Does the exec_mode have to be here?
+    # TODO: Does the exec_mode have to be here?
     def pre_execution_hook(self, version, experiment_dir, exec_mode=ExecutionModeKeys.TEST):
         '''
         Before execution, this method will be called to set the version obtained from `self.versions`. Also `experiment_dir` will provide the destination to save the experiment in as specified in the config file. The exec_mode will be passed, with on of the keys as specified in `ExecutionModeKeys`. This function can be used to define the experiment's hyperparameters based on the information of the version being executed duering an iteration. This method will be once called before `train_loop` for each version. 
         '''
         raise NotImplementedError
-  
-    def train_loop(self, input_fn, steps):
+
+    
+    def setup_model(self,version):
         '''
-This will be called when the experiment is entering the traning phase. Ideally, what needs to happen in this function is to use the `input_fn` and execute the training loop for a given number of steps which will be passed through `steps`. The input_fn passed here will be the object returned by the `get_train_input` method of the dataloader. In addition, other functionalities can be included here as well, such as saving the experiment parameters during training, etc. Th return value of the method will be logged.
+        This function will be called before the 'export_model' and 'pre_execution_hook'. It expects to set the 'self.model' of the Experiment class here. This will be callaed before the train_loop function and the 'export_model' methods. The current version spec will passed to this method.
+'''
+        raise NotImplementedError()
+    
+    def train_loop(self, input_fn, steps, version):
+        '''
+This will be called when the experiment is entering the traning phase. Ideally, what needs to happen in this function is to use the `input_fn` and execute the training loop for a given number of steps which will be passed through `steps`. The input_fn passed here will be the object returned by the `get_train_input` method of the dataloader. In addition, other functionalities can be included here as well, such as saving the experiment parameters during training, etc. Th return value of the method will be logged. The current version spec will passed to this method.
 '''
         raise NotImplementedError
 
-    def evaluate_loop(self,input_fn, steps):
+    def evaluate_loop(self,input_fn, steps, version):
         '''
-This will be called when the experiment is entering the testing phase following the training phase. Ideally, what needs to happen in this function is to use the input_fn to obtain the inputs and execute the evaluation loop for a given number of steps. The input function passed here will be the object returned by the `get_train_input` and `get_test_input` methods of the dataloader. In addition to that other functionalities can be included here as well, such as saving the experiment parameters, producing additional statistics etc. the return value of the method will be logged.
+This will be called when the experiment is entering the testing phase following the training phase. Ideally, what needs to happen in this function is to use the input_fn to obtain the inputs and execute the evaluation loop for a given number of steps. The input function passed here will be the object returned by the `get_train_input` and `get_test_input` methods of the dataloader. In addition to that other functionalities can be included here as well, such as saving the experiment parameters, producing additional statistics etc. the return value of the method will be logged. The current version spec will passed to this method.
 '''
         raise NotImplementedError
 
-    def get_current_version(self):
+    def export_model(self, version):
         '''
-This function should return a dict, which represents the current version.
+        This method is called when a model is called with the export settings. Either by setting the respecitve command line argument or passing the export parameter in the versions.
 '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_trained_step_count(self):
         '''
@@ -97,7 +103,7 @@ class DataLoaderABC():
   # This function will be called before the execution of a specific verion of a experiment. This function can be used to modify the data provided by dataloader based in the needs of the version of the experiment being executed. 
   # '''
   #       raise NotImplementedError
-    def get_train_input(self, mode= ModeKeys.TRAIN, **kargs):
+    def get_train_input(self, mode= ExecutionModeKeys.TRAIN, **kargs):
         '''
         This function returns an object which will be passed to the `Experiment.train_loop` when executing the training function of the experiment, the same function will be used for evaluation following training using `Experiment.evaluate_loop` . The the object returned by this function would depend on the how the return function will be used in the experiment. (eg: for Tensorflow models the returnn value can be a function object, for pyTorch it can be a Dataset object. In both cases the output of this function will be providing the data used for training)
 '''

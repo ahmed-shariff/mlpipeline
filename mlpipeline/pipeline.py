@@ -15,9 +15,10 @@ import logging
 
 from mlpipeline.utils import log
 from mlpipeline.utils import set_logger
+from mlpipeline.utils import _experimentModeKeys
 
 from mlpipeline.global_values import EXPERIMENTS_DIR
-from mlpipeline.global_values import TEST_MODE
+from mlpipeline.global_values import EXPERIMENT_MODE
 from mlpipeline.global_values import NO_LOG
 from mlpipeline.global_values import USE_BLACKLIST
 USE_HISTORY = False
@@ -30,14 +31,17 @@ def _main():
         args = ["_mlpipeline_subprocess", current_experiment_name, EXPERIMENTS_DIR]
         if NO_LOG:
             args.append("-n")
-        if not TEST_MODE:
+        if EXPERIMENT_MODE == _experimentModeKeys.RUN:
             args.append("-r")
+        elif EXPERIMENT_MODE == _experimentModeKeys.EXPORT:
+            args.append("-e")
         # if USE_HISTORY:
         #     args.append("-u")
+        print(args)
         output = subprocess.call(args, universal_newlines = True)
         if output == 3 or output == 1:
             completed_experiments.append(current_experiment_name)
-        if TEST_MODE:
+        if EXPERIMENT_MODE == _experimentModeKeys.TEST:
             break
         current_experiment_name  = _get_experiment(completed_experiments)
 
@@ -71,7 +75,7 @@ def _get_experiment(completed_experiments = []):
     return None
 
 def _config_update():
-    if TEST_MODE:
+    if EXPERIMENT_MODE == _experimentModeKeys.TEST:
         config_from = "experiments_test.config"
     else:
         config_from = "experiments.config"
@@ -117,10 +121,11 @@ def main(argv = None):
     parser.add_argument('-r','--run', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true')
     parser.add_argument('-u','--use-history', help='If set will use the history log to determine if a experiment script has been executed.', action = 'store_true')
     parser.add_argument('-n','--no_log', help='If set non of the logs will be appended to the log files.', action = 'store_true')
+    parser.add_argument('-e','--export', help='If set, will run the experiment in export mode instead of training/eval loop.', action = 'store_true')
     argv = parser.parse_args()
     config = configparser.ConfigParser(allow_no_value=True)
     config_file = config.read("mlp.config")
-    global TEST_MODE
+    global EXPERIMENT_MODE
     global NO_LOG
     global EXPERIMENTS_DIR
     
@@ -149,17 +154,22 @@ def main(argv = None):
         raise
 
     if argv is not None:#len(unused_argv)> 0:
-        if argv.run:#any("r" in s for s in unused_argv) :
-            TEST_MODE = False
+        if argv.run and argv.export:
+            print("ERROR: Cannot have both 'run' and 'export'")
+            return
+        if argv.run:
+            EXPERIMENT_MODE = _experimentModeKeys.RUN
+        elif argv.export:
+            EXPERIMENT_MODE = _experimentModeKeys.EXPORT
         else:
-            TEST_MODE = True
+            EXPERIMENT_MODE = _experimentModeKeys.TEST
       
         # if argv.use_history:#any("h" in s for s in unused_argv):
         #     USE_HISTORY = True
         # else:
         #     USE_HISTORY = False
 
-    LOGGER = set_logger(test_mode = TEST_MODE, no_log = NO_LOG, log_file = log_file)
+    LOGGER = set_logger(experiment_mode = EXPERIMENT_MODE, no_log = NO_LOG, log_file = log_file)
     log("=====================ML-Pipeline session started")
     _main()
     log("=====================ML-Pipeline Session ended")

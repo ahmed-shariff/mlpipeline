@@ -18,7 +18,7 @@ EXECUTED_EXPERIMENTS = {}
 USE_BLACKLIST=True
 LISTED_EXPERIMENTS=[]
 
-TEST_MODE = True
+EXPERIMENT_MODE = 'Test'
 
 mtime='mtime'
 version='version'
