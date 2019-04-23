@@ -350,7 +350,7 @@ def log(message, level = logging.INFO, log_to_file=True, modifier_1=None, modifi
     message = "{0}{1}{2}{3}".format(modifier_1, modifier_2, message, reset_string)
     if LOGGER is None:
         set_logger()
-        self.log("'set_logger' not called. Setting up Logger with default settings. To override, call 'set_logger' before any calls to 'log'", level = logging.WARN, modifier_1 = console_colors.RED_FG)
+        log("'set_logger' not called. Setting up Logger with default settings. To override, call 'set_logger' before any calls to 'log'", level = logging.WARN, modifier_1 = console_colors.RED_FG)
     LOGGER.log(level, message)
     #EXPERIMENT_MODE and NO_LOG will be set in the pipline subprocess script
     if LOGGER.EXPERIMENT_MODE != ExperimentModeKeys.TEST and not LOGGER.NO_LOG and log_to_file:
@@ -586,7 +586,7 @@ class _PipelineConfig():
     '''
 
     def __init__(self):
-        import mlpipeline.default_configurations as config
+        import mlpipeline._default_configurations as config
         self.experiments_dir = config.EXPERIMENTS_DIR
         self.output_file = config.OUTPUT_FILE
         self.history_file = config.HISTORY_FILE

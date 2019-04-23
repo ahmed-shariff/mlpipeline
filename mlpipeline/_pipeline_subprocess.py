@@ -74,7 +74,7 @@ class _AddToAndReturnResultString():#_add_to_and_return_result_string
                 self.result_string += message + "\n"
         return self.result_string
     
-def _mlpipeline_main_loop(file_path, whitelist_versions = None, blacklist_versions = None):
+def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versions = None):
     '''
     Returns False if there are no more versions to execute or a version resulted in an exception
     Returns True otherwise.
@@ -431,20 +431,22 @@ def main():
     else:
         experiment_mode = ExperimentModeKeys.TEST
 
-    mlpipeline_execute_exeperiment(argv.file_path,
-                                   argv.experiments_dir,
-                                   experiment_mode,
-                                   argv.no_log,
-                                   whitelist_versions = argv.whitelist_versions,
-                                   blacklist_versions = argv.blacklist_versions)
+    CONFIG.cmd_mode = True
+    
+    _execute_exeperiment(argv.file_path,
+                         argv.experiments_dir,
+                         experiment_mode,
+                         argv.no_log,
+                         whitelist_versions = argv.whitelist_versions,
+                         blacklist_versions = argv.blacklist_versions)
     
     
-def mlpipeline_execute_exeperiment(file_path,
-                                   experiments_dir,
-                                   experiment_mode = ExperimentModeKeys.TEST,
-                                   no_log = False,
-                                   whitelist_versions = None,
-                                   blacklist_versions = None):
+def _execute_exeperiment(file_path,
+                         experiments_dir,
+                         experiment_mode = ExperimentModeKeys.TEST,
+                         no_log = False,
+                         whitelist_versions = None,
+                         blacklist_versions = None):
     '''
     Returns False if there are no more versions to execute or a version resulted in an exception
     Returns True otherwise.
@@ -507,9 +509,8 @@ def mlpipeline_execute_exeperiment(file_path,
         
     CONFIG.logger = set_logger(experiment_mode = CONFIG.experiment_mode, no_log = CONFIG.no_log, log_file = CONFIG.log_file)
     add_script_dir_to_PATH(CONFIG.experiments_dir)
-    return _mlpipeline_main_loop(file_path, whitelist_versions = whitelist_versions, blacklist_versions = blacklist_versions)
+    return _experiment_main_loop(file_path, whitelist_versions = whitelist_versions, blacklist_versions = blacklist_versions)
     
 if __name__ == "__main__":
-    CONFIG.cmd_mode = True
     main()
   

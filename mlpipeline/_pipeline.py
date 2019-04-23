@@ -28,20 +28,20 @@ def _mlpipeline_main_loop():
     current_experiment_name = _get_experiment()
     while current_experiment_name is not None:
         #exec subprocess
-        output = _execute_subprocess(current_experiment_name, CONFIG.experiments_dir, CONFIG.experiment_mode, CONFIG.no_log)
+        output = _execute_subprocess(current_experiment_name)
         if output == 3 or output == 1:
             completed_experiments.append(current_experiment_name)
         if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
             break
         current_experiment_name  = _get_experiment(completed_experiments)
 
-def _execute_subprocess(experiment_name, experiments_dir, experiment_mode, no_log, whitelist_versions = None, blacklist_versions = None):
-    args = ["_mlpipeline_subprocess", experiment_name, experiments_dir]
-    if no_log:
+def _execute_subprocess(experiment_name, whitelist_versions = None, blacklist_versions = None):
+    args = ["_mlpipeline_subprocess", experiment_name, CONFIG.experiments_dir]
+    if CONFIG.no_log:
         args.append("-n")
-    if experiment_mode == ExperimentModeKeys.RUN:
+    if CONFIG.experiment_mode == ExperimentModeKeys.RUN:
         args.append("-r")
-    elif experiment_mode == ExperimentModeKeys.EXPORT:
+    elif CONFIG.experiment_mode == ExperimentModeKeys.EXPORT:
         args.append("-e")
         
     if whitelist_versions is not None:
@@ -87,6 +87,7 @@ def _get_experiment(completed_experiments = []):
     return None
 
 def _config_update():
+    log("Updating configuration")
     if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
         config_from = "experiments_test.config"
     else:
@@ -123,29 +124,23 @@ def _config_update():
             log("\033[1;031mWARNING:\033[0:031mNo {0} section in 'cnn.config' file\033[0m".format(
                 ["BLACKLISTED_EXPERIMENTS" if CONFIG.use_blacklist else "WHITELISTED_EXPERIMENTS"][0]), log_to_file = True, level = logging.ERROR)
 
-
-def main(argv = None):
-    #if argv is None:
-    parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
-    parser.add_argument('-r','--run', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true')
-    parser.add_argument('-u','--use-history', help='If set will use the history log to determine if a experiment script has been executed.', action = 'store_true')
-    parser.add_argument('-n','--no_log', help='If set non of the logs will be appended to the log files.', action = 'store_true')
-    parser.add_argument('-e','--export', help='If set, will run the experiment in export mode instead of training/eval loop.', action = 'store_true')
-    argv = parser.parse_args()
+def _init_pipeline(experiment_mode, experiment_dir = None, no_log = False):
     config = configparser.ConfigParser(allow_no_value=True)
     config_file = config.read("mlp.config")
     
-    CONFIG.no_log = argv.no_log
-    
-    if len(config_file)==0:
-        print("\033[1;031mWARNING:\033[0:031mNo 'mlp.config' file found\033[0m")
+    CONFIG.no_log = no_log
+    CONFIG.experiment_mode = experiment_mode
+    if experiment_dir is None:
+        if len(config_file)==0:
+            print("\033[1;031mWARNING:\033[0:031mNo 'mlp.config' file found\033[0m")
+        else:
+            try:
+                config["MLP"]
+            except KeyError:
+                print("\033[1;031mWARNING:\033[0:031mNo MLP section in 'mlp.config' file\033[0m")
+            CONFIG.experiments_dir = config.get("MLP", "experiments_dir", fallback=CONFIG.experiments_dir)
     else:
-        try:
-            config["MLP"]
-        except KeyError:
-            print("\033[1;031mWARNING:\033[0:031mNo MLP section in 'mlp.config' file\033[0m")
-        CONFIG.experiments_dir = config.get("MLP", "experiments_dir", fallback=CONFIG.experiments_dir)
-
+        CONFIG.experiments_dir = experiment_dir
 
     hostName = socket.gethostname()
     EXPERIMENTS_DIR_OUTPUTS = CONFIG.experiments_dir + "/outputs"
@@ -161,41 +156,37 @@ def main(argv = None):
       else:
         raise
 
-    if argv is not None:#len(unused_argv)> 0:
-        if argv.run and argv.export:
-            print("ERROR: Cannot have both 'run' and 'export'")
-            return
-        if argv.run:
-            CONFIG.experiment_mode = ExperimentModeKeys.RUN
-        elif argv.export:
-            CONFIG.experiment_mode = ExperimentModeKeys.EXPORT
-        else:
-            CONFIG.experiment_mode = ExperimentModeKeys.TEST
-      
-        # if argv.use_history:#any("h" in s for s in unused_argv):
-        #     USE_HISTORY = True
-        # else:
-        #     USE_HISTORY = False
-
     LOGGER = set_logger(experiment_mode = CONFIG.experiment_mode, no_log = CONFIG.no_log, log_file = log_file)
+
+def main(argv = None):
+    parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
+    parser.add_argument('-r','--run', help='Will set the pipeline to execute the pipline fully, if not set will be executed in test mode', action = 'store_true')
+    parser.add_argument('-u','--use-history', help='If set will use the history log to determine if a experiment script has been executed.', action = 'store_true')
+    parser.add_argument('-n','--no_log', help='If set non of the logs will be appended to the log files.', action = 'store_true')
+    parser.add_argument('-e','--export', help='If set, will run the experiment in export mode instead of training/eval loop.', action = 'store_true')
+    argv = parser.parse_args()
+    if argv.run and argv.export:
+        print("ERROR: Cannot have both 'run' and 'export'")
+        return
+    if argv.run:
+        experiment_mode = ExperimentModeKeys.RUN
+    elif argv.export:
+        experiment_mode = ExperimentModeKeys.EXPORT
+    else:
+        experiment_mode = ExperimentModeKeys.TEST
+
+    # if argv.use_history:#any("h" in s for s in unused_argv):
+    #     USE_HISTORY = True
+    # else:
+    #     USE_HISTORY = False
+
+    
+    CONFIG.cmd_mode = True
+    _init_pipeline(experiment_mode, no_log = argv.no_log)
     log_special_tokens.log_session_started()
     _mlpipeline_main_loop()
     log_special_tokens.log_session_ended()
-
-def mlpipeline_execute_pipeline(experiments,
-                                experiments_dir,
-                                experiment_mode = ExperimentModeKeys.TEST,
-                                no_log = False):
-    '''
-    This function can be used to execute the same operation of executimg mlpipeline, programatically.
-    '''
-    assert any([isinstance(e, ExperimentWrapper) for e in experiments])
-    for experiment in experiments:
-        log("Processing: {}".format(experiment.file_path))
-        _execute_subprocess(experiment.file_path, experiments_dir, experiment_mode, no_log,
-                            experiment.whitelist_versions, experiment.blacklist_versions)
     
 if __name__ == "__main__":
-    CONFIG.cmd_mode = True
     main()
     
