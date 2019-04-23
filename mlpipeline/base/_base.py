@@ -6,7 +6,7 @@ from mlpipeline.utils import console_colors
 from mlpipeline.utils import copy_related_files
 from mlpipeline.utils import _collect_related_files
 
-class Experiment():
+class ExperimentABC():
     '''
     each experiment script should have a global variable `EXPERIMENT` set with an instance of this class. Refer to the methods for more details.
 '''
@@ -86,7 +86,7 @@ try to include the relevent information you would want to refer to when assessin
     copy_related_files = copy_related_files
     _collect_related_files = _collect_related_files
 
-class DataLoader():
+class DataLoaderABC():
     summery = None
     def __init__(self, **kargs):
         raise NotImplementedError

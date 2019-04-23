@@ -11,9 +11,8 @@ from mlpipeline.utils import add_script_dir_to_PATH
 from mlpipeline.utils import ExecutionModeKeys
 from mlpipeline.utils import Versions
 from mlpipeline.utils import MetricContainer
-from mlpipeline.helper import Experiment
-from mlpipeline.helper import DataLoader
-
+from mlpipeline.base import ExperimentABC
+from mlpipeline.base import DataLoaderABC
 
 class An_ML_Model():
     def __init__(self, hyperparameter="default value"):
@@ -22,7 +21,7 @@ class An_ML_Model():
     def train(self):
         return "Trained using {}".format(self.hyperparameter)
 
-class TestingDataLoader(DataLoader):
+class TestingDataLoader(DataLoaderABC):
     def __init__(self):
         self.log("creating dataloader")
 
@@ -39,12 +38,11 @@ class TestingDataLoader(DataLoader):
         return lambda:"got input form test input function"
   
   
-class TestingExperiment(Experiment):
+class TestingExperiment(ExperimentABC):
     def __init__(self, versions, **args):
         super().__init__(versions, **args)
         self.model = An_ML_Model()
     
-
     def pre_execution_hook(self, version, experiment_dir, exec_mode=ExecutionModeKeys.TEST):
         self.log("Pre execution")
         self.log("Version spec: {}".format(version))
