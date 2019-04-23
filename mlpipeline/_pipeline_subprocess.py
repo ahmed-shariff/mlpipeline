@@ -15,7 +15,7 @@ from datetime import datetime
 from mlpipeline.utils import (ExecutionModeKeys,
                               version_parameters,
                               log_special_tokens,
-                              VersionLog,
+                              _VersionLog,
                               console_colors,
                               log,
                               set_logger,
@@ -34,6 +34,34 @@ from mlpipeline.global_values import (EXPERIMENTS_DIR,
                                       train_time,
                                       vless)
 
+class _ExecutedExperiment():
+    '''
+    Class used to track the state of the experiments and their versions.
+    '''
+    def __init__(self, version, modified_time):
+        # uses the proprtty setter
+        self.version = version
+        self._modified_time = modified_time
+        
+    @property
+    def version(self):
+        '''
+        The _VersionLog object of the corresponding experiment
+        '''
+        return self._version
+
+    @version.setter
+    def version(self, value):
+        assert isinstance(value, _VersionLog)
+        self._version = value
+    
+    @property
+    def modified_time(self):
+        '''
+        Time stamp of the last time the experiment was modified
+        '''
+        return self._modified_time
+        
 def _main(file_path):
     current_experiment, version_name, clean_experiment_dir = _get_experiment(file_path)
     if current_experiment is None:
@@ -254,10 +282,10 @@ def _get_experiment(file_path, just_return_experiment=False):
 
     if file_path not in EXECUTED_EXPERIMENTS:
         EXECUTED_EXPERIMENTS[experiment.name] = {}
-        EXECUTED_EXPERIMENTS[experiment.name][train_time]=0
-        EXECUTED_EXPERIMENTS[experiment.name][version]=VersionLog()
+        EXECUTED_EXPERIMENTS[experiment.name].train_time=0
+        EXECUTED_EXPERIMENTS[experiment.name].version=_VersionLog()
 
-    EXECUTED_EXPERIMENTS[experiment.name][mtime] = os.path.getmtime(file_path)
+    EXECUTED_EXPERIMENTS[experiment.name].modified_time = os.path.getmtime(file_path)
 
     ## Determine if training should be started from scratch or should resume training
     ## Here, the modified time is used as an indicator.
@@ -270,23 +298,23 @@ def _get_experiment(file_path, just_return_experiment=False):
             reset_experiment_dir = False
     if reset_experiment_dir:
         clean_experiment_dir = True
-        EXECUTED_EXPERIMENTS[experiment.name][version].clean()
+        EXECUTED_EXPERIMENTS[experiment.name].version.clean()
     else:
         # If a training had started and not completed, resume the training of that version
         versions__ = [v_ for v_ in versions._versions.keys()]
         for v,t in module_history:
             if t > modified_time:
-                if EXECUTED_EXPERIMENTS[experiment.name][version].executed(v) is not VersionLog.EXECUTED and v in versions__:
+                if EXECUTED_EXPERIMENTS[experiment.name].version.executed(v) is not _VersionLog.EXECUTED and v in versions__:
                     modified_time = t
                     returning_version = v
     ## If there are no training sessions to be resumed, decide which version to execute next based on the ORDER set in the version
     if returning_version is None:
         #TODO: check if this line works:
         for v,k in sorted(versions._versions.items(), key=lambda x:x[1][version_parameters.ORDER]):
-            if EXECUTED_EXPERIMENTS[experiment.name][version].executed(v) is not VersionLog.EXECUTED:
+            if EXECUTED_EXPERIMENTS[experiment.name].version.executed(v) is not _VersionLog.EXECUTED:
                 returning_version = v
                 clean_experiment_dir = True
-    log("Executed versions: {0}".format(EXECUTED_EXPERIMENTS[experiment.name][version].executed_versions),
+    log("Executed versions: {0}".format(EXECUTED_EXPERIMENTS[experiment.name].version.executed_versions),
         log_to_file=False)
     if returning_version is None:
         return None, None, False
@@ -310,16 +338,16 @@ def _save_training_time(experiment, version_):
     name = experiment.name
     with open(TRAINING_HISTORY_LOG_FILE, "a") as log_file:
         time = datetime.now().timestamp()
-        EXECUTED_EXPERIMENTS[name][version].addExecutingVersion(version_, time)
-        log("Executing version: {0}".format(EXECUTED_EXPERIMENTS[experiment.name][version].executing_version),
+        EXECUTED_EXPERIMENTS[name].version.addExecutingVersion(version_, time)
+        log("Executing version: {0}".format(EXECUTED_EXPERIMENTS[experiment.name].version.executing_version),
             log_to_file=False)
         log_file.write("{0}::{1}::{2}\n".format(name,
-                                                EXECUTED_EXPERIMENTS[name][version].executing_version,
+                                                EXECUTED_EXPERIMENTS[name].version.executing_version,
                                                 time))
 
     
 def _save_results_to_file(resultString, experiment):#experiment, result, train_result, dataloader, training_done, experiment_dir):
-    modified_dt = datetime.isoformat(datetime.fromtimestamp(EXECUTED_EXPERIMENTS[experiment.name][mtime]))
+    modified_dt = datetime.isoformat(datetime.fromtimestamp(EXECUTED_EXPERIMENTS[experiment.name].modified_time))
     result_dt = datetime.now().isoformat()
   
     #_add_to_and_return_result_string("\n[{0}]:ml-pipline: output: \n".format(result_dt))
@@ -328,10 +356,10 @@ def _save_results_to_file(resultString, experiment):#experiment, result, train_r
         outfile.write(resultString)
     with open(HISTORY_FILE, 'a', encoding = "utf-8") as hist_file:
         hist_file.write("{0}::{1}::{2}\n".format(experiment.name,
-                                                 EXECUTED_EXPERIMENTS[experiment.name][mtime],
-                                                 EXECUTED_EXPERIMENTS[experiment.name][version].executing_version))
+                                                 EXECUTED_EXPERIMENTS[experiment.name].modified_time,
+                                                 EXECUTED_EXPERIMENTS[experiment.name].version.executing_version))
     
-    EXECUTED_EXPERIMENTS[experiment.name][version].moveExecutingToExecuted()
+    EXECUTED_EXPERIMENTS[experiment.name].version.moveExecutingToExecuted()
 
 
 def main():
@@ -387,27 +415,24 @@ def main():
                         v = hist_entry[2]
                     if name not in EXECUTED_EXPERIMENTS:
                         EXECUTED_EXPERIMENTS[name] = {}
-                        EXECUTED_EXPERIMENTS[name][mtime] = float(time)
-                        EXECUTED_EXPERIMENTS[name][version] = VersionLog()
+                        EXECUTED_EXPERIMENTS[name].modified_time = float(time)
+                        EXECUTED_EXPERIMENTS[name].version = _VersionLog()
                         if v is not None and v is not "":
-                            EXECUTED_EXPERIMENTS[name][version].addExecutedVersion(v)
-                            #needs to be taken from seperate file
-                            #EXECUTED_EXPERIMENTS[name][train_time] = float(ttime)
+                            EXECUTED_EXPERIMENTS[name].version.addExecutedVersion(v)
                     else:
-                        if EXECUTED_EXPERIMENTS[name][mtime] < float(time):
-                            EXECUTED_EXPERIMENTS[name][mtime] = float(time)
-                            EXECUTED_EXPERIMENTS[name][version].clean()
+                        if EXECUTED_EXPERIMENTS[name].modified_time < float(time):
+                            EXECUTED_EXPERIMENTS[name].modified_time = float(time)
+                            EXECUTED_EXPERIMENTS[name].version.clean()
                         if v is not None and v is not "":
-                            EXECUTED_EXPERIMENTS[name][version].addExecutedVersion(v)
-                            #EXECUTED_EXPERIMENTS[name][train_time] = float(ttime)
+                            EXECUTED_EXPERIMENTS[name].version.addExecutedVersion(v)
             with open(TRAINING_HISTORY_LOG_FILE, "r") as t_hist_file:
                 t_history = [line.rstrip("\n") for line in t_hist_file]
                 for t_entry in t_history:
                     name,v,t = t_entry.split("::")
                     t = float(t)
                     if name in EXECUTED_EXPERIMENTS:
-                        if EXECUTED_EXPERIMENTS[name][mtime] < t and EXECUTED_EXPERIMENTS[name][version].executed(v) is not VersionLog.EXECUTED:
-                            EXECUTED_EXPERIMENTS[name][version].addExecutingVersion(v,t)
+                        if EXECUTED_EXPERIMENTS[name].modified_time < t and EXECUTED_EXPERIMENTS[name].version.executed(v) is not _VersionLog.EXECUTED:
+                            EXECUTED_EXPERIMENTS[name].version.addExecutingVersion(v,t)
 
                             
     if argv.no_log:

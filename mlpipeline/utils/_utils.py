@@ -182,7 +182,7 @@ The combinations by the above call would be:
             for k,v in parameters_temp.items():
                 version[k] = v
             
-class VersionLog():
+class _VersionLog():
     '''
     used to maintain experiment version information.
     '''
