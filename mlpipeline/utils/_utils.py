@@ -313,7 +313,7 @@ def copy_related_files(experiment, dst_dir):
     assert os.path.isdir(dst_dir)
     log("Copying imported custom scripts to {}".format(dst_dir))
     for file in experiment.__related_files:
-        if LOGGER.EXPERIMENT_MODE != _experimentModeKeys.TEST:
+        if LOGGER.EXPERIMENT_MODE == _experimentModeKeys.TEST:
             log("Not copying in TEST mode: file - {}".format(file))
         else:
             shutil.copy(file, dst_dir)
@@ -499,3 +499,22 @@ class MetricContainer(EasyDict):
     def reset_epoc(self, metrics = None):
         for metric in self._get_matrics_subset(metrics):
             metric.reset_epoc()
+
+#Implimented as a class with properties for clarity and safty of sanity
+class _PipelineConfig():
+    '''
+    Used by pipeline to maintin the configurations across multiple functions
+    '''
+
+    def __init__(self):
+        import mlpipeline.default_configurations as config
+        self.experiments_dir = config.EXPERIMENTS_DIR
+        self.output_file = config.OUTPUT_FILE
+        self.history_file = config.HISTORY_FILE
+        self.training_history_log_file = config.TRAINING_HISTORY_LOG_FILE
+        self.no_log = config.NO_LOG
+        self.executed_experiments = config.EXECUTED_EXPERIMENTS
+        self.use_blacklist = config.USE_BLACKLIST
+        self.listed_experiments = config.LISTED_EXPERIMENTS
+        self.experiment_mode = config.EXPERIMENT_MODE
+        self.logger = None

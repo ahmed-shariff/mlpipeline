@@ -22,18 +22,10 @@ from mlpipeline.utils import (_experimentModeKeys,
                               set_logger,
                               add_script_dir_to_PATH,
                               use_mlflow,
-                              MetricContainer)
+                              MetricContainer,
+                              _PipelineConfig)
 
-
-from mlpipeline.global_values import (EXPERIMENTS_DIR,
-                                      NO_LOG,
-                                      EXECUTED_EXPERIMENTS,
-                                      USE_BLACKLIST,
-                                      EXPERIMENT_MODE,
-                                      mtime,
-                                      version,
-                                      train_time,
-                                      vless)
+CONFIG = _PipelineConfig()
 
 class _ExecutedExperiment():
     '''
@@ -62,18 +54,33 @@ class _ExecutedExperiment():
         Time stamp of the last time the experiment was modified
         '''
         return self._modified_time
-        
+
+class _AddToAndReturnResultString():#_add_to_and_return_result_string
+    def __init__(self,):
+        self.result_string = ""
+
+    def __call__(self,  message=None, reset_result_string = False, indent = True):
+        if message is not None:
+            if indent:
+                message = "\t\t" + message
+            if reset_result_string:
+                self.result_string = message + "\n"
+            else:
+                self.result_string += message + "\n"
+        return self.result_string
+    
 def _main(file_path):
     current_experiment, version_name_s, clean_experiment_dir = _get_experiment(file_path)
+    _add_to_and_return_result_string = _AddToAndReturnResultString()
     if current_experiment is None:
         sys.exit(3)
 
     log("Experiment loaded: {0}".format(current_experiment.name))
-    if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+    if CONFIG.experiment_mode == _experimentModeKeys.TEST:
         log("Mode: {}{}".format(console_colors.YELLOW_FG, log_special_tokens.MODE_TESTING),
 	    modifier_1 = console_colors.BOLD,
 	    modifier_2 = console_colors.GREEN_FG)
-    elif EXPERIMENT_MODE == _experimentModeKeys.EXPORT:
+    elif CONFIG.experiment_mode == _experimentModeKeys.EXPORT:
         log("Mode: {}{}".format(console_colors.YELLOW_FG, log_special_tokens.MODE_EXPORTING),
 	    modifier_1 = console_colors.BOLD,
 	    modifier_2 = console_colors.MEGENTA_FG)
@@ -82,11 +89,11 @@ def _main(file_path):
 	    modifier_1 = console_colors.BOLD,
 	    modifier_2 = console_colors.GREEN_FG)
         
-    if EXPERIMENT_MODE == _experimentModeKeys.EXPORT:
+    if CONFIG.experiment_mode == _experimentModeKeys.EXPORT:
         for version_name, version_spec in version_name_s.items():
             experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
             experiment_dir_suffix = "-" + experiment_dir_suffix if experiment_dir_suffix is not None else version_name
-            output_dir = "{}/outputs".format(EXPERIMENTS_DIR.rstrip("/"))
+            output_dir = "{}/outputs".format(CONFIG.experiments_dir.rstrip("/"))
             experiment_dir="{}/experiment_ckpts/{}{}".format(output_dir,
                                                    current_experiment.name.split(".")[-2],
                                                    experiment_dir_suffix)
@@ -120,12 +127,12 @@ def _main(file_path):
         log("Version_spec: {}".format(version_spec))
 
         record_training = False
-        if EXPERIMENT_MODE == _experimentModeKeys.TEST:
-            experiment_dir = "{0}/outputs/experiment_ckpts/temp".format(EXPERIMENTS_DIR.rstrip("/"))
+        if CONFIG.experiment_mode == _experimentModeKeys.TEST:
+            experiment_dir = "{0}/outputs/experiment_ckpts/temp".format(CONFIG.experiments_dir.rstrip("/"))
             shutil.rmtree(experiment_dir, ignore_errors=True)
         else:
             experiment_dir_suffix = "-" + experiment_dir_suffix if experiment_dir_suffix is not None else version_name
-            output_dir = "{}/outputs".format(EXPERIMENTS_DIR.rstrip("/"))
+            output_dir = "{}/outputs".format(CONFIG.experiments_dir.rstrip("/"))
             experiment_dir="{}/experiment_ckpts/{}{}".format(output_dir,
                                                    current_experiment.name.split(".")[-2],
                                                    experiment_dir_suffix)
@@ -166,7 +173,7 @@ def _main(file_path):
             current_experiment.setup_model(version_spec)
             os.makedirs(experiment_dir, exist_ok = True)
             current_experiment.copy_related_files(experiment_dir)
-            if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+            if CONFIG.experiment_mode == _experimentModeKeys.TEST:
                 test__eval_steps = 1
                 train_eval_steps = 1
             else:
@@ -201,7 +208,7 @@ def _main(file_path):
             except Exception as e:
                 train_results = "Training evaluation failed: {0}".format(str(e))
                 log(train_results, logging.ERROR)
-                if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+                if CONFIG.experiment_mode == _experimentModeKeys.TEST:
                     raise
 
             try:
@@ -219,7 +226,7 @@ def _main(file_path):
             except Exception as e:
                 eval_results = "Test evaluation failed: {0}".format(str(e))
                 log(eval_results, logging.ERROR)
-                if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+                if CONFIG.experiment_mode == _experimentModeKeys.TEST:
                     raise
 
             log("Experiment evaluation complete")
@@ -235,21 +242,21 @@ def _main(file_path):
             _add_to_and_return_result_string("-------------------------------------------")
             _add_to_and_return_result_string("DATALOADER	 SUMMERY:")
             _add_to_and_return_result_string(dataloader.summery)
-            if record_training and not NO_LOG:
+            if record_training and not CONFIG.no_log:
                 _save_results_to_file(_add_to_and_return_result_string(), current_experiment)
 
         except Exception as e:
-            if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+            if CONFIG.experiment_mode == _experimentModeKeys.TEST:
                 raise
             else:
                 log("Exception: {0}".format(str(e)), logging.ERROR)
                 sys.exit(1)
-        if EXPERIMENT_MODE == _experimentModeKeys.RUN and use_mlflow:
+        if CONFIG.experiment_mode == _experimentModeKeys.RUN and use_mlflow:
             mlflow.end_run()
 
     
 def _get_training_steps(mode, experiment, clean_experiment_dir, version_spec):
-    if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+    if CONFIG.experiment_mode == _experimentModeKeys.TEST:
         return 1
     else:
         current_version = version_spec
@@ -282,7 +289,7 @@ def _get_experiment(file_path, just_return_experiment=False):
     except:
         log("{0} is not a experiment script. It does not contain a `EXPERIMENT` global variable".format(file_path))
         return None, None, False
-    experiment._collect_related_files(EXPERIMENTS_DIR, [os.path.abspath(module.__file__)])
+    experiment._collect_related_files(CONFIG.experiments_dir, [os.path.abspath(module.__file__)])
     # TODO: why did i add this in the first place??
     # if just_return_experiment:
     #	  print("\033[1;33mJust returning module\033[1;0m")
@@ -299,21 +306,21 @@ def _get_experiment(file_path, just_return_experiment=False):
 						experiment.name,
 						console_colors.RESET))
 
-    if EXPERIMENT_MODE == _experimentModeKeys.EXPORT:
+    if CONFIG.experiment_mode == _experimentModeKeys.EXPORT:
         return experiment, {v:k for v,k in sorted(versions._versions.items(), key=lambda x:x[1][version_parameters.ORDER])}, False
     
     ## Get the training history. i.e. the time stamps of each training launched
-    with open(TRAINING_HISTORY_LOG_FILE, "r") as t_hist_file:
+    with open(CONFIG.training_history_log_file, "r") as t_hist_file:
         t_history = [line.rstrip("\n") for line in t_hist_file]
         all_history = [t_entry.split("::") for t_entry in t_history]
         module_history = [(v,float(t)) for n,v,t in all_history if n == experiment.name]
 
-    if file_path not in EXECUTED_EXPERIMENTS:
-        EXECUTED_EXPERIMENTS[experiment.name] = {}
-        EXECUTED_EXPERIMENTS[experiment.name].train_time=0
-        EXECUTED_EXPERIMENTS[experiment.name].version=_VersionLog()
-
-    EXECUTED_EXPERIMENTS[experiment.name].modified_time = os.path.getmtime(file_path)
+    modified_time = os.path.getmtime(file_path)
+    if file_path not in CONFIG.executed_experiments:
+        CONFIG.executed_experiments[experiment.name] = _ExecutedExperiment(version = _VersionLog(),
+                                                                    modified_time = modified_time)
+    else:
+        CONFIG.executed_experiments[experiment.name].modified_time = modified_time
 
     ## Determine if training should be started from scratch or should resume training
     ## Here, the modified time is used as an indicator.
@@ -326,68 +333,57 @@ def _get_experiment(file_path, just_return_experiment=False):
             reset_experiment_dir = False
     if reset_experiment_dir:
         clean_experiment_dir = True
-        EXECUTED_EXPERIMENTS[experiment.name].version.clean()
+        CONFIG.executed_experiments[experiment.name].version.clean()
     else:
         # If a training had started and not completed, resume the training of that version
         versions__ = [v_ for v_ in versions._versions.keys()]
         for v,t in module_history:
             if t > modified_time:
-                if EXECUTED_EXPERIMENTS[experiment.name].version.executed(v) is not _VersionLog.EXECUTED and v in versions__:
+                if CONFIG.executed_experiments[experiment.name].version.executed(v) is not _VersionLog.EXECUTED and v in versions__:
                     modified_time = t
                     returning_version = v
     ## If there are no training sessions to be resumed, decide which version to execute next based on the ORDER set in the version
     if returning_version is None:
         #TODO: check if this line works:
         for v,k in sorted(versions._versions.items(), key=lambda x:x[1][version_parameters.ORDER]):
-            if EXECUTED_EXPERIMENTS[experiment.name].version.executed(v) is not _VersionLog.EXECUTED:
+            if CONFIG.executed_experiments[experiment.name].version.executed(v) is not _VersionLog.EXECUTED:
                 returning_version = v
                 clean_experiment_dir = True
-    log("Executed versions: {0}".format(EXECUTED_EXPERIMENTS[experiment.name].version.executed_versions),
+    log("Executed versions: {0}".format(CONFIG.executed_experiments[experiment.name].version.executed_versions),
         log_to_file=False)
     if returning_version is None:
         return None, None, False
     return experiment, returning_version, clean_experiment_dir
     
 
-def _add_to_and_return_result_string(message=None, reset_result_string = False, indent = True):
-    global result_string
-    if message is not None:
-        if indent:
-            message = "\t\t" + message
-        if reset_result_string:
-            result_string = message + "\n"
-        else:
-            result_string += message + "\n"
-    return result_string
-
 def _save_training_time(experiment, version_):
-    if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+    if CONFIG.experiment_mode == _experimentModeKeys.TEST:
         return
     name = experiment.name
-    with open(TRAINING_HISTORY_LOG_FILE, "a") as log_file:
+    with open(CONFIG.training_history_log_file, "a") as log_file:
         time = datetime.now().timestamp()
-        EXECUTED_EXPERIMENTS[name].version.addExecutingVersion(version_, time)
-        log("Executing version: {0}".format(EXECUTED_EXPERIMENTS[experiment.name].version.executing_version),
+        CONFIG.executed_experiments[name].version.addExecutingVersion(version_, time)
+        log("Executing version: {0}".format(CONFIG.executed_experiments[experiment.name].version.executing_version),
             log_to_file=False)
         log_file.write("{0}::{1}::{2}\n".format(name,
-                                                EXECUTED_EXPERIMENTS[name].version.executing_version,
+                                                CONFIG.executed_experiments[name].version.executing_version,
                                                 time))
 
     
 def _save_results_to_file(resultString, experiment):#experiment, result, train_result, dataloader, training_done, experiment_dir):
-    modified_dt = datetime.isoformat(datetime.fromtimestamp(EXECUTED_EXPERIMENTS[experiment.name].modified_time))
+    modified_dt = datetime.isoformat(datetime.fromtimestamp(CONFIG.executed_experiments[experiment.name].modified_time))
     result_dt = datetime.now().isoformat()
   
     #_add_to_and_return_result_string("\n[{0}]:ml-pipline: output: \n".format(result_dt))
-    with open(OUTPUT_FILE, 'a', encoding = "utf-8") as outfile:
+    with open(CONFIG.output_file, 'a', encoding = "utf-8") as outfile:
         outfile.write("\n[{0}]:ml-pipline: output: \n".format(result_dt))
         outfile.write(resultString)
-    with open(HISTORY_FILE, 'a', encoding = "utf-8") as hist_file:
+    with open(CONFIG.history_file, 'a', encoding = "utf-8") as hist_file:
         hist_file.write("{0}::{1}::{2}\n".format(experiment.name,
-                                                 EXECUTED_EXPERIMENTS[experiment.name].modified_time,
-                                                 EXECUTED_EXPERIMENTS[experiment.name].version.executing_version))
+                                                 CONFIG.executed_experiments[experiment.name].modified_time,
+                                                 CONFIG.executed_experiments[experiment.name].version.executing_version))
     
-    EXECUTED_EXPERIMENTS[experiment.name].version.moveExecutingToExecuted()
+    CONFIG.executed_experiments[experiment.name].version.moveExecutingToExecuted()
 
 
 def main():
@@ -400,41 +396,32 @@ def main():
     parser.add_argument('-e','--export', help='If set, will run the experiment in export mode instead of training/eval loop.', action = 'store_true')
     argv = parser.parse_args()
     
-    global EXPERIMENT_MODE
-    global NO_LOG
-    global LOGGER
-    global EXPERIMENTS_DIR
-    global HISTORY_FILE
-    global LOG_FILE
-    global OUTPUT_FILE
-    global TRAINING_HISTORY_LOG_FILE
-    
     file_path = argv.file_path
-    EXPERIMENTS_DIR = argv.experiments_dir
+    CONFIG.experiments_dir = argv.experiments_dir
     
     hostName = socket.gethostname()
-    EXPERIMENTS_DIR_OUTPUTS = EXPERIMENTS_DIR + "/outputs"
-    OUTPUT_FILE = EXPERIMENTS_DIR_OUTPUTS + "/output-{0}".format(hostName)
-    HISTORY_FILE = EXPERIMENTS_DIR_OUTPUTS + "/history-{0}".format(hostName)
-    TRAINING_HISTORY_LOG_FILE = EXPERIMENTS_DIR_OUTPUTS + "/t_history-{0}".format(hostName)
-    LOG_FILE = EXPERIMENTS_DIR_OUTPUTS + "/log-{0}".format(hostName)
-    open(OUTPUT_FILE, "a").close()
-    open(HISTORY_FILE, "a").close()
-    open(TRAINING_HISTORY_LOG_FILE, "a").close()
-    open(LOG_FILE, "a").close()
+    EXPERIMENTS_DIR_OUTPUTS = CONFIG.experiments_dir + "/outputs"
+    CONFIG.output_file = EXPERIMENTS_DIR_OUTPUTS + "/output-{0}".format(hostName)
+    CONFIG.history_file = EXPERIMENTS_DIR_OUTPUTS + "/history-{0}".format(hostName)
+    CONFIG.training_history_log_file = EXPERIMENTS_DIR_OUTPUTS + "/t_history-{0}".format(hostName)
+    CONFIG.log_file = EXPERIMENTS_DIR_OUTPUTS + "/log-{0}".format(hostName)
+    open(CONFIG.output_file, "a").close()
+    open(CONFIG.history_file, "a").close()
+    open(CONFIG.training_history_log_file, "a").close()
+    open(CONFIG.log_file, "a").close()
 
     if argv.run:#any("r" in s for s in unused_argv) :
-        EXPERIMENT_MODE = _experimentModeKeys.RUN
+        CONFIG.experiment_mode = _experimentModeKeys.RUN
     elif argv.export:
-        EXPERIMENT_MODE = _experimentModeKeys.EXPORT
+        CONFIG.experiment_mode = _experimentModeKeys.EXPORT
     else:
-        EXPERIMENT_MODE = _experimentModeKeys.TEST
+        CONFIG.experiment_mode = _experimentModeKeys.TEST
 
     if True:#argv.use_history:#any("h" in s for s in unused_argv):
-        if not os.path.isfile(HISTORY_FILE) and not os.path.isfile(TRAINING_HISTORY_LOG_FILE):
+        if not os.path.isfile(CONFIG.history_file) and not os.path.isfile(CONFIG.training_history_log_file):
             print("\033[1;31mWARNING: No 'history' file in 'experiments' folder. No history read\033[0m")
         else:
-            with open(HISTORY_FILE, 'r', encoding = "utf-8") as hist_file:
+            with open(CONFIG.history_file, 'r', encoding = "utf-8") as hist_file:
                 history = [line.rstrip("\n") for line in hist_file]
                 for hist_entry in history:
                     hist_entry = hist_entry.split("::")
@@ -444,35 +431,33 @@ def main():
                     v = None
                     if len(hist_entry) > 2:
                         v = hist_entry[2]
-                    if name not in EXECUTED_EXPERIMENTS:
-                        EXECUTED_EXPERIMENTS[name] = {}
-                        EXECUTED_EXPERIMENTS[name].modified_time = float(time)
-                        EXECUTED_EXPERIMENTS[name].version = _VersionLog()
+                    if name not in CONFIG.executed_experiments:
+                        CONFIG.executed_experiments[name] = _ExecutedExperiment(_VersionLog(), float(time))
                         if v is not None and v is not "":
-                            EXECUTED_EXPERIMENTS[name].version.addExecutedVersion(v)
+                            CONFIG.executed_experiments[name].version.addExecutedVersion(v)
                     else:
-                        if EXECUTED_EXPERIMENTS[name].modified_time < float(time):
-                            EXECUTED_EXPERIMENTS[name].modified_time = float(time)
-                            EXECUTED_EXPERIMENTS[name].version.clean()
+                        if CONFIG.executed_experiments[name].modified_time < float(time):
+                            CONFIG.executed_experiments[name].modified_time = float(time)
+                            CONFIG.executed_experiments[name].version.clean()
                         if v is not None and v is not "":
-                            EXECUTED_EXPERIMENTS[name].version.addExecutedVersion(v)
-            with open(TRAINING_HISTORY_LOG_FILE, "r") as t_hist_file:
+                            CONFIG.executed_experiments[name].version.addExecutedVersion(v)
+            with open(CONFIG.training_history_log_file, "r") as t_hist_file:
                 t_history = [line.rstrip("\n") for line in t_hist_file]
                 for t_entry in t_history:
                     name,v,t = t_entry.split("::")
                     t = float(t)
-                    if name in EXECUTED_EXPERIMENTS:
-                        if EXECUTED_EXPERIMENTS[name].modified_time < t and EXECUTED_EXPERIMENTS[name].version.executed(v) is not _VersionLog.EXECUTED:
-                            EXECUTED_EXPERIMENTS[name].version.addExecutingVersion(v,t)
+                    if name in CONFIG.executed_experiments:
+                        if CONFIG.executed_experiments[name].modified_time < t and CONFIG.executed_experiments[name].version.executed(v) is not _VersionLog.EXECUTED:
+                            CONFIG.executed_experiments[name].version.addExecutingVersion(v,t)
 
                             
     if argv.no_log:
-        NO_LOG = True
+        CONFIG.no_log = True
     else:
-        NO_LOG = False
+        CONFIG.no_log = False
         
-    LOGGER = set_logger(experiment_mode = EXPERIMENT_MODE, no_log = NO_LOG, log_file = LOG_FILE)
-    add_script_dir_to_PATH(EXPERIMENTS_DIR)
+    CONFIG.logger = set_logger(experiment_mode = CONFIG.experiment_mode, no_log = CONFIG.no_log, log_file = CONFIG.log_file)
+    add_script_dir_to_PATH(CONFIG.experiments_dir)
     _main(file_path)
     
     

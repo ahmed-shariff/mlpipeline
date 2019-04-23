@@ -1,3 +1,8 @@
+#TODO: move this file to a config file?
+# This file came about as a result of historical reason,
+# no perticular reason to have this as a py file at this point
+
+# The driectory in which the experiments scripts are placed
 EXPERIMENTS_DIR="experiments"
 OUTPUT_FILE = EXPERIMENTS_DIR + "/output"
 
@@ -19,8 +24,3 @@ USE_BLACKLIST=True
 LISTED_EXPERIMENTS=[]
 
 EXPERIMENT_MODE = 'Test'
-
-mtime='mtime'
-version='version'
-train_time="train_time"
-vless="vless"

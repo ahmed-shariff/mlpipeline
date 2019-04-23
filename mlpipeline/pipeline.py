@@ -13,27 +13,25 @@ import socket
 import argparse
 import logging
 
-from mlpipeline.utils import log
-from mlpipeline.utils import set_logger
-from mlpipeline.utils import _experimentModeKeys
+from mlpipeline.utils import (log,
+                              set_logger,
+                              _experimentModeKeys,
+                              _PipelineConfig)
 
-from mlpipeline.global_values import EXPERIMENTS_DIR
-from mlpipeline.global_values import EXPERIMENT_MODE
-from mlpipeline.global_values import NO_LOG
-from mlpipeline.global_values import USE_BLACKLIST
+# Use_history is a lil funkcy for now, so leaving it here. If using should move it to _PipelineConfig
 USE_HISTORY = False
-
+CONFIG = _PipelineConfig()
 def _main():
     completed_experiments = []
     current_experiment_name = _get_experiment()
     while current_experiment_name is not None:
         #exec subprocess
-        args = ["_mlpipeline_subprocess", current_experiment_name, EXPERIMENTS_DIR]
-        if NO_LOG:
+        args = ["_mlpipeline_subprocess", current_experiment_name, CONFIG.experiments_dir]
+        if CONFIG.no_log:
             args.append("-n")
-        if EXPERIMENT_MODE == _experimentModeKeys.RUN:
+        if CONFIG.experiment_mode == _experimentModeKeys.RUN:
             args.append("-r")
-        elif EXPERIMENT_MODE == _experimentModeKeys.EXPORT:
+        elif CONFIG.experiment_mode == _experimentModeKeys.EXPORT:
             args.append("-e")
         # if USE_HISTORY:
         #     args.append("-u")
@@ -41,28 +39,28 @@ def _main():
         output = subprocess.call(args, universal_newlines = True)
         if output == 3 or output == 1:
             completed_experiments.append(current_experiment_name)
-        if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+        if CONFIG.experiment_mode == _experimentModeKeys.TEST:
             break
         current_experiment_name  = _get_experiment(completed_experiments)
 
 def _get_experiment(completed_experiments = []):
     _config_update()
-    for rdir, dirs, files in os.walk(EXPERIMENTS_DIR):
+    for rdir, dirs, files in os.walk(CONFIG.experiments_dir):
         for f in files:
             if f.endswith(".py"):
                 file_path = os.path.join(rdir,f)
                 if completed_experiments is not None and file_path in completed_experiments:
                     continue
                 # TODO: Should remove this check, prolly has no use!
-                if USE_BLACKLIST and file_path in LISTED_EXPERIMENTS:
+                if CONFIG.use_blacklist and file_path in CONFIG.listed_experiments:
                     continue
-                if not USE_BLACKLIST and file_path not in LISTED_EXPERIMENTS:
+                if not CONFIG.use_blacklist and file_path not in CONFIG.listed_experiments:
                     continue
                 skip_experiment_for_now = False
 
                 # Ensure the files loaded are in the order they are
                 # specified in the config file
-                for listed_experiment_file in LISTED_EXPERIMENTS:
+                for listed_experiment_file in CONFIG.listed_experiments:
                     if listed_experiment_file != file_path:
                         if listed_experiment_file not in completed_experiments:
                             skip_experiment_for_now = True
@@ -75,15 +73,12 @@ def _get_experiment(completed_experiments = []):
     return None
 
 def _config_update():
-    if EXPERIMENT_MODE == _experimentModeKeys.TEST:
+    if CONFIG.experiment_mode == _experimentModeKeys.TEST:
         config_from = "experiments_test.config"
     else:
         config_from = "experiments.config"
     config = configparser.ConfigParser(allow_no_value=True)
     config_file = config.read(config_from)
-  
-    global USE_BLACKLIST
-    global LISTED_EXPERIMENTS
   
     if len(config_file)==0:
         log("\033[1;031mWARNING:\033[0:031mNo 'experiments.config' file found\033[0m", log_to_file = True)
@@ -92,27 +87,27 @@ def _config_update():
             config["MLP"]
         except KeyError:
             log("\033[1;031mWARNING:\033[0:031mNo MLP section in 'experiments.config' file\033[0m", log_to_file = True, level = logging.WARNING)
-        USE_BLACKLIST =  config.getboolean("MLP", "use_blacklist", fallback=USE_BLACKLIST)
+        CONFIG.use_blacklist =  config.getboolean("MLP", "use_blacklist", fallback=CONFIG.use_blacklist)
         try:
-            if USE_BLACKLIST:
-                LISTED_EXPERIMENTS = config["BLACKLISTED_EXPERIMENTS"]
+            if CONFIG.use_blacklist:
+                CONFIG.listed_experiments = config["BLACKLISTED_EXPERIMENTS"]
             else:
-                LISTED_EXPERIMENTS = config["WHITELISTED_EXPERIMENTS"]
+                CONFIG.listed_experiments = config["WHITELISTED_EXPERIMENTS"]
             l = []
-            for experiment in LISTED_EXPERIMENTS:
-                l.append(os.path.join(EXPERIMENTS_DIR, experiment))
+            for experiment in CONFIG.listed_experiments:
+                l.append(os.path.join(CONFIG.experiments_dir, experiment))
 
             for experiment in l:
                 if not os.path.exists(experiment):
                     l.remove(experiment)
                     log("Script missing: {}".format(experiment), level = logging.WARNING)
-            LISTED_EXPERIMENTS = l
+            CONFIG.listed_experiments = l
             log("\033[1;036m{0}\033[0;036m: {1}\033[0m".format(
-                ["BLACKLISTED_EXPERIMENTS" if USE_BLACKLIST else "WHITELISTED_EXPERIMENTS"][0].replace("_"," "),
-                LISTED_EXPERIMENTS).lower(), log_to_file = True)
+                ["BLACKLISTED_EXPERIMENTS" if CONFIG.use_blacklist else "WHITELISTED_EXPERIMENTS"][0].replace("_"," "),
+                CONFIG.listed_experiments).lower(), log_to_file = True)
         except KeyError:
             log("\033[1;031mWARNING:\033[0:031mNo {0} section in 'cnn.config' file\033[0m".format(
-                ["BLACKLISTED_EXPERIMENTS" if USE_BLACKLIST else "WHITELISTED_EXPERIMENTS"][0]), log_to_file = True, level = logging.ERROR)
+                ["BLACKLISTED_EXPERIMENTS" if CONFIG.use_blacklist else "WHITELISTED_EXPERIMENTS"][0]), log_to_file = True, level = logging.ERROR)
 
 
 def main(argv = None):
@@ -125,9 +120,8 @@ def main(argv = None):
     argv = parser.parse_args()
     config = configparser.ConfigParser(allow_no_value=True)
     config_file = config.read("mlp.config")
-    global EXPERIMENT_MODE
-    global NO_LOG
-    global EXPERIMENTS_DIR
+    
+    CONFIG.no_log = argv.no_log
     
     if len(config_file)==0:
         print("\033[1;031mWARNING:\033[0:031mNo 'mlp.config' file found\033[0m")
@@ -136,11 +130,11 @@ def main(argv = None):
             config["MLP"]
         except KeyError:
             print("\033[1;031mWARNING:\033[0:031mNo MLP section in 'mlp.config' file\033[0m")
-        EXPERIMENTS_DIR = config.get("MLP", "experiments_dir", fallback=EXPERIMENTS_DIR)
+        CONFIG.experiments_dir = config.get("MLP", "experiments_dir", fallback=CONFIG.experiments_dir)
 
 
     hostName = socket.gethostname()
-    EXPERIMENTS_DIR_OUTPUTS = EXPERIMENTS_DIR + "/outputs"
+    EXPERIMENTS_DIR_OUTPUTS = CONFIG.experiments_dir + "/outputs"
     if not os.path.exists(EXPERIMENTS_DIR_OUTPUTS):
         os.makedirs(EXPERIMENTS_DIR_OUTPUTS)
     log_file = EXPERIMENTS_DIR_OUTPUTS + "/log-{0}".format(hostName)
@@ -158,18 +152,18 @@ def main(argv = None):
             print("ERROR: Cannot have both 'run' and 'export'")
             return
         if argv.run:
-            EXPERIMENT_MODE = _experimentModeKeys.RUN
+            CONFIG.experiment_mode = _experimentModeKeys.RUN
         elif argv.export:
-            EXPERIMENT_MODE = _experimentModeKeys.EXPORT
+            CONFIG.experiment_mode = _experimentModeKeys.EXPORT
         else:
-            EXPERIMENT_MODE = _experimentModeKeys.TEST
+            CONFIG.experiment_mode = _experimentModeKeys.TEST
       
         # if argv.use_history:#any("h" in s for s in unused_argv):
         #     USE_HISTORY = True
         # else:
         #     USE_HISTORY = False
 
-    LOGGER = set_logger(experiment_mode = EXPERIMENT_MODE, no_log = NO_LOG, log_file = log_file)
+    LOGGER = set_logger(experiment_mode = CONFIG.experiment_mode, no_log = CONFIG.no_log, log_file = log_file)
     log("=====================ML-Pipeline session started")
     _main()
     log("=====================ML-Pipeline Session ended")
