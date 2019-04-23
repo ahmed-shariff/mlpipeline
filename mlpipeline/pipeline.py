@@ -14,37 +14,51 @@ import argparse
 import logging
 
 from mlpipeline.utils import (log,
+                              log_special_tokens,
                               set_logger,
-                              _experimentModeKeys,
-                              _PipelineConfig)
+                              ExperimentModeKeys,
+                              _PipelineConfig,
+                              ExperimentWrapper)
 
 # Use_history is a lil funkcy for now, so leaving it here. If using should move it to _PipelineConfig
 USE_HISTORY = False
 CONFIG = _PipelineConfig()
-def _main():
+def _mlpipeline_main_loop():
     completed_experiments = []
     current_experiment_name = _get_experiment()
     while current_experiment_name is not None:
         #exec subprocess
-        args = ["_mlpipeline_subprocess", current_experiment_name, CONFIG.experiments_dir]
-        if CONFIG.no_log:
-            args.append("-n")
-        if CONFIG.experiment_mode == _experimentModeKeys.RUN:
-            args.append("-r")
-        elif CONFIG.experiment_mode == _experimentModeKeys.EXPORT:
-            args.append("-e")
-        # if USE_HISTORY:
-        #     args.append("-u")
-        print(args)
-        output = subprocess.call(args, universal_newlines = True)
+        output = _execute_subprocess(current_experiment_name, CONFIG.experiments_dir, CONFIG.experiment_mode, CONFIG.no_log)
         if output == 3 or output == 1:
             completed_experiments.append(current_experiment_name)
-        if CONFIG.experiment_mode == _experimentModeKeys.TEST:
+        if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
             break
         current_experiment_name  = _get_experiment(completed_experiments)
 
+def _execute_subprocess(experiment_name, experiments_dir, experiment_mode, no_log, whitelist_versions = None, blacklist_versions = None):
+    args = ["_mlpipeline_subprocess", experiment_name, experiments_dir]
+    if no_log:
+        args.append("-n")
+    if experiment_mode == ExperimentModeKeys.RUN:
+        args.append("-r")
+    elif experiment_mode == ExperimentModeKeys.EXPORT:
+        args.append("-e")
+        
+    if whitelist_versions is not None:
+        args.append("--whitelist-versions")
+        for version in whitelist_versions:
+            args.append(version)
+    if blacklist_versions is not None:
+        args.append("--blacklist-versions")
+        for version in blacklist_versions:
+            args.append(version)
+    # if USE_HISTORY:
+    #     args.append("-u")
+    return subprocess.call(args, universal_newlines = True)
+
 def _get_experiment(completed_experiments = []):
-    _config_update()
+    if CONFIG.cmd_mode:
+        _config_update()
     for rdir, dirs, files in os.walk(CONFIG.experiments_dir):
         for f in files:
             if f.endswith(".py"):
@@ -73,7 +87,7 @@ def _get_experiment(completed_experiments = []):
     return None
 
 def _config_update():
-    if CONFIG.experiment_mode == _experimentModeKeys.TEST:
+    if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
         config_from = "experiments_test.config"
     else:
         config_from = "experiments.config"
@@ -152,11 +166,11 @@ def main(argv = None):
             print("ERROR: Cannot have both 'run' and 'export'")
             return
         if argv.run:
-            CONFIG.experiment_mode = _experimentModeKeys.RUN
+            CONFIG.experiment_mode = ExperimentModeKeys.RUN
         elif argv.export:
-            CONFIG.experiment_mode = _experimentModeKeys.EXPORT
+            CONFIG.experiment_mode = ExperimentModeKeys.EXPORT
         else:
-            CONFIG.experiment_mode = _experimentModeKeys.TEST
+            CONFIG.experiment_mode = ExperimentModeKeys.TEST
       
         # if argv.use_history:#any("h" in s for s in unused_argv):
         #     USE_HISTORY = True
@@ -164,12 +178,24 @@ def main(argv = None):
         #     USE_HISTORY = False
 
     LOGGER = set_logger(experiment_mode = CONFIG.experiment_mode, no_log = CONFIG.no_log, log_file = log_file)
-    log("=====================ML-Pipeline session started")
-    _main()
-    log("=====================ML-Pipeline Session ended")
+    log_special_tokens.log_session_started()
+    _mlpipeline_main_loop()
+    log_special_tokens.log_session_ended()
 
-
+def mlpipeline_execute_pipeline(experiments,
+                                experiments_dir,
+                                experiment_mode = ExperimentModeKeys.TEST,
+                                no_log = False):
+    '''
+    This function can be used to execute the same operation of executimg mlpipeline, programatically.
+    '''
+    assert any([isinstance(e, ExperimentWrapper) for e in experiments])
+    for experiment in experiments:
+        log("Processing: {}".format(experiment.file_path))
+        _execute_subprocess(experiment.file_path, experiments_dir, experiment_mode, no_log,
+                            experiment.whitelist_versions, experiment.blacklist_versions)
     
-if __name__ == "__main__":  
+if __name__ == "__main__":
+    CONFIG.cmd_mode = True
     main()
     
