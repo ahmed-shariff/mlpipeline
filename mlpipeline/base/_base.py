@@ -80,14 +80,13 @@ try to include the relevent information you would want to refer to when assessin
             self.summery = ""
         self.summery += "\t\t{0}\n".format(content)
 
-    def log(self, message,log_to_file=False, **kargs):
+    def log(self, message, log_to_file=False, agent=None, **kargs):
         '''
         This Function can be used to log details from within the experiment
     '''
-        log("{}Exp- {}{}".format(console_colors.CYAN_FG,
-                                console_colors.RESET,
-                                message),
-            log_to_file=log_to_file, **kargs)
+        if agent is not None:
+            message = "{}: {}".format(agent, message)
+        log(message, agent = "Expriment", log_to_file=log_to_file, **kargs)
 
     copy_related_files = copy_related_files
     _collect_related_files = _collect_related_files
@@ -140,13 +139,12 @@ This function can be used to set the summery of the dataloader, which will be ad
         if self.summery is None:
             self.summery = ""
         self.summery += "\t\t{0}\n".format(content)
-    def log(self, message,log_to_file=False, **kargs):
+    def log(self, message,log_to_file=False, agent=None, **kargs):
         '''
         This Function can be used to log details from within the dataloader
     '''
-        log("{}Exp- {}{}".format(console_colors.CYAN_FG,
-                                   console_colors.RESET,
-                                   message),
-            log_to_file=log_to_file, **kargs)
-      
+        if agent is not None:
+            message = "{}: {}".format(agent, message)
+        log(message, agent = "DataLoader", log_to_file=log_to_file, **kargs)
+
     

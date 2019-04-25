@@ -331,12 +331,19 @@ def set_logger(experiment_mode = ExperimentModeKeys.TEST, no_log = True, log_fil
 def _genName():
     return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5))
 
-def log(message, level = logging.INFO, log_to_file=True, modifier_1=None, modifier_2=None):
+def log(message, level = logging.INFO, log_to_file=True, agent=None, modifier_1=None, modifier_2=None):
     # if level is not logging.INFO and level is not logging.ERROR:
     #   raise AttributeError("level cannot be other than logging.INFO or logging.ERROR, coz i am lazy to get others in here")
     # assert any(special_token in message for special_token in
     #            log_special_tokens.values()), \
     #            "`message` cannot contain special token (check utils.log_special_tokens)"
+
+    if agent is not None:
+        message = "{}{}- {}{}".format(console_colors.CYAN_FG,
+                                      agent,
+                                      console_colors.RESET,
+                                      message)
+    
     if modifier_1 is None and modifier_2 is None:
         reset_string = ""
     else:
