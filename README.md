@@ -1,3 +1,4 @@
+**Note that the this documentation is a tad bit outdated. Will be updating as soon as I can**
 # ml-pipeline
 I use this pipeline to simplify my life when working on ML projects. 
 
