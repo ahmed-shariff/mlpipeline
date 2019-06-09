@@ -17,7 +17,7 @@ setuptools.setup(
     install_requires=['easydict>=1.8'],
     entry_points={
         'console_scripts':[
-            'mlpipeline=mlpipeline.pipeline:main',
+            'mlpipeline=mlpipeline._pipeline:main',
             '_mlpipeline_subprocess=mlpipeline._pipeline_subprocess:main'
             ]
         },

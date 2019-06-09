@@ -20,7 +20,7 @@ except ImportError:
 
 LOGGER = None
 
-class _experimentModeKeys():
+class ExperimentModeKeys():
     '''
     Enum class that defines the keys to use to specify the execution mode of the experiment
 '''
@@ -75,7 +75,7 @@ class version_parameters():
     USE_ALL_CLASSES = "use_all_classes"
 
         
-class log_special_tokens(EasyDict):
+class log_special_tokens():
     MODE_RUNNING = "RUNNING"
     MODE_TESTING = "TESTING"
     MODE_EXPORTING = "EXPORTING"
@@ -83,7 +83,43 @@ class log_special_tokens(EasyDict):
     EVALUATION_COMPLETE = "Evaluation loop complete"
     SESSION_STARTED = "=====================ML-Pipeline session started"
     SESSION_ENDED = "=====================ML-Pipeline Session ended"
+    EXPERIMENT_STARTED = "-----------------Experiment run started"
+    EXPERIMENT_ENDED = "-----------------Experiment run ended"
 
+    @classmethod
+    def log_session_started(cls):
+        log(cls.SESSION_STARTED)
+
+    @classmethod
+    def log_session_ended(cls):
+        log(cls.SESSION_ENDED)
+
+    @classmethod
+    def log_experiment_started(cls):
+        log(cls.EXPERIMENT_STARTED)
+
+    @classmethod
+    def log_experiment_ended(cls):
+        log(cls.EXPERIMENT_ENDED)
+
+    @classmethod
+    def log_mode_test(cls):
+        log("Mode: {}{}".format(console_colors.YELLOW_FG, log_special_tokens.MODE_TESTING),
+	    modifier_1 = console_colors.BOLD,
+	    modifier_2 = console_colors.GREEN_FG)
+
+    @classmethod
+    def log_mode_train(cls):
+        log("Mode: {}{}".format(console_colors.RED_FG, log_special_tokens.MODE_RUNNING),
+	    modifier_1 = console_colors.BOLD,
+	    modifier_2 = console_colors.GREEN_FG)
+
+    @classmethod
+    def log_mode_exporting(cls):
+        log("Mode: {}{}".format(console_colors.YELLOW_FG, log_special_tokens.MODE_EXPORTING),
+	    modifier_1 = console_colors.BOLD,
+	    modifier_2 = console_colors.MEGENTA_FG)
+        
 class Versions():
     '''
     The class that holds the paramter versions.
@@ -125,6 +161,10 @@ class Versions():
         self._versions[name] = v
 
     def get_version(self, version_name):
+        '''
+        Returns the version with name `version_name`. 
+        The return value is a EasyDict object which represents the version
+        '''
         try:
             return self._versions[version_name]
         except KeyError:
@@ -182,7 +222,46 @@ The combinations by the above call would be:
             version = self.get_version(names[idx])
             for k,v in parameters_temp.items():
                 version[k] = v
-            
+
+    def get_versions(self):
+        '''
+        Returns the list of versions (which are each an EasyDict object) 
+        sorted by the ORDER parameter of each version.
+        '''
+        return sorted(self._versions.items(), key=lambda x:x[1][version_parameters.ORDER])
+
+    def get_version_names(self):
+        '''
+        Returns the list of name of the versions.
+        '''
+        return list(self._versions.keys())
+
+    def filter_versions(self,*, blacklist_versions = None, whitelist_versions = None):
+        '''
+        This function can be used to filter the version to be executed.
+        Only one of the two parameteres should be passed. And the values passed should be an iterable.
+        If blacklist_versions is passed, the versions lised will be dropped from the versions.
+        If whitelist_versions is passed, the versions not listed will be dropped from the versions.
+        If nither parameters are passed, no changes will be made.
+        '''
+        if blacklist_versions is not None and whitelist_versions is not None:
+            raise ValueError("Cannot pass both `whitelist_versions` and `blacklist_versions`!")
+        elif blacklist_versions is None and whitelist_versions is None:
+            return
+
+        filtered_versions = {}
+        if blacklist_versions is not None:
+            for version_name in self.get_version_names():
+                if version_name not in blacklist_versions:
+                    filtered_versions[version_name] = self.get_version(version_name)
+        elif whitelist_versions is not None:
+            for version_name in whitelist_versions:
+                filtered_versions[version_name] = self.get_version(version_name)
+
+        log("Versions before filter: {}".format(self.get_version_names()))
+        self._versions = filtered_versions
+        log("Versions after filter: {}".format(self.get_version_names()))
+    
 class _VersionLog():
     '''
     used to maintain experiment version information.
@@ -226,7 +305,7 @@ class _VersionLog():
         self.executing_version=None
         self.executing_v_time=0.0
         
-def set_logger(experiment_mode = _experimentModeKeys.TEST, no_log = True, log_file = None):
+def set_logger(experiment_mode = ExperimentModeKeys.TEST, no_log = True, log_file = None):
     global LOGGER
     global use_mlflow
     formatter = logging.Formatter(fmt= "%(asctime)s:{0}{1}%(levelname)s:{2}%(name)s{3}- %(message)s" \
@@ -244,7 +323,7 @@ def set_logger(experiment_mode = _experimentModeKeys.TEST, no_log = True, log_fi
     handler.setLevel(logging.INFO)
     LOGGER.addHandler(handler)
     LOGGER.EXPERIMENT_MODE = experiment_mode
-    use_mlflow = experiment_mode != _experimentModeKeys.TEST
+    use_mlflow = experiment_mode != ExperimentModeKeys.TEST
     LOGGER.NO_LOG = no_log
     LOGGER.LOG_FILE = log_file
     return LOGGER
@@ -271,10 +350,10 @@ def log(message, level = logging.INFO, log_to_file=True, modifier_1=None, modifi
     message = "{0}{1}{2}{3}".format(modifier_1, modifier_2, message, reset_string)
     if LOGGER is None:
         set_logger()
-        self.log("'set_logger' not called. Setting up Logger with default settings. To override, call 'set_logger' before any calls to 'log'", level = logging.WARN, modifier_1 = console_colors.RED_FG)
+        log("'set_logger' not called. Setting up Logger with default settings. To override, call 'set_logger' before any calls to 'log'", level = logging.WARN, modifier_1 = console_colors.RED_FG)
     LOGGER.log(level, message)
     #EXPERIMENT_MODE and NO_LOG will be set in the pipline subprocess script
-    if LOGGER.EXPERIMENT_MODE != _experimentModeKeys.TEST and not LOGGER.NO_LOG and log_to_file:
+    if LOGGER.EXPERIMENT_MODE != ExperimentModeKeys.TEST and not LOGGER.NO_LOG and log_to_file:
         with open(LOGGER.LOG_FILE, 'a', encoding="utf-8") as log_file:
             level = ["INFO" if level is logging.INFO else "ERROR"]
             time = datetime.now().isoformat()
@@ -313,7 +392,7 @@ def copy_related_files(experiment, dst_dir):
     assert os.path.isdir(dst_dir)
     log("Copying imported custom scripts to {}".format(dst_dir))
     for file in experiment.__related_files:
-        if LOGGER.EXPERIMENT_MODE != _experimentModeKeys.TEST:
+        if LOGGER.EXPERIMENT_MODE == ExperimentModeKeys.TEST:
             log("Not copying in TEST mode: file - {}".format(file))
         else:
             shutil.copy(file, dst_dir)
@@ -472,7 +551,7 @@ class MetricContainer(EasyDict):
                 
             s = "{}: {:.4f}    ".format(name, value)
             # EXPERIMENT_MODE is set in the pipeline subprocess script
-            if use_mlflow and log_to_file and LOGGER.EXPERIMENT_MODE != _experimentModeKeys.TEST:
+            if use_mlflow and log_to_file and LOGGER.EXPERIMENT_MODE != ExperimentModeKeys.TEST:
                 mlflow.log_metric(name, value)
             row_char_count += len(s)
             if row_char_count > charachters_per_row:
@@ -499,3 +578,34 @@ class MetricContainer(EasyDict):
     def reset_epoc(self, metrics = None):
         for metric in self._get_matrics_subset(metrics):
             metric.reset_epoc()
+
+#Implimented as a class with properties for clarity and safty of sanity
+class _PipelineConfig():
+    '''
+    Used by pipeline to maintin the configurations across multiple functions
+    '''
+
+    def __init__(self):
+        import mlpipeline._default_configurations as config
+        self.experiments_dir = config.EXPERIMENTS_DIR
+        self.output_file = config.OUTPUT_FILE
+        self.history_file = config.HISTORY_FILE
+        self.training_history_log_file = config.TRAINING_HISTORY_LOG_FILE
+        self.no_log = config.NO_LOG
+        self.executed_experiments = config.EXECUTED_EXPERIMENTS
+        self.use_blacklist = config.USE_BLACKLIST
+        self.listed_experiments = config.LISTED_EXPERIMENTS
+        self.experiment_mode = config.EXPERIMENT_MODE
+        self.logger = None
+        self.cmd_mode = False
+
+class ExperimentWrapper():
+    '''
+    To be used when using the programmetic interface to execute the pipeline
+    '''
+    def __init__(self, file_path, whitelist_versions = None, blacklist_versions = None):
+        self.file_path = file_path
+        if whitelist_versions is not None and blacklist_versions is not None:
+            raise ValueError("Both `whitelist_versions` and `blacklist_versions` cannot be set!")
+        self.whitelist_versions = whitelist_versions
+        self.blacklist_versions = blacklist_versions
