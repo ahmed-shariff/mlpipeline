@@ -94,7 +94,7 @@ try to include the relevent information you would want to refer to when assessin
 class DataLoaderABC():
     summery = None
     def __init__(self, **kargs):
-        raise NotImplementedError
+        pass
     
   #TODO: remove this method? as each version will be given it's own dataloader....
   #     def set_classes(self, use_all_classes, classes_count):
