@@ -36,7 +36,7 @@ class ExperimentABC():
         raise NotImplementedError
 
     
-    def setup_model(self,version):
+    def setup_model(self,version, experiment_dir):
         '''
         This function will be called before the 'export_model' and 'pre_execution_hook'. It expects to set the 'self.model' of the Experiment class here. This will be callaed before the train_loop function and the 'export_model' methods. The current version spec will passed to this method.
 '''

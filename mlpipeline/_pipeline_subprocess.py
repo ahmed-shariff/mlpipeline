@@ -93,14 +93,14 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
 
     log("Experiment loaded: {0}".format(current_experiment.name))
     if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
-        log_special_tokens.log_mode_test
+        log_special_tokens.log_mode_test()
     elif CONFIG.experiment_mode == ExperimentModeKeys.EXPORT:
-        log_special_tokens.log_mode_exporting
+        log_special_tokens.log_mode_exporting()
     else:
-        log_special_tokens.log_mode_train
+        log_special_tokens.log_mode_train()
         
     if CONFIG.experiment_mode == ExperimentModeKeys.EXPORT:
-        for version_name, version_spec in version_name_s.items():
+        for version_name, version_spec in version_name_s:
             experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
             experiment_dir_suffix = "-" + experiment_dir_suffix if experiment_dir_suffix is not None else version_name
             output_dir = "{}/outputs".format(CONFIG.experiments_dir.rstrip("/"))
@@ -108,7 +108,7 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
                                                    current_experiment.name.split(".")[-2],
                                                    experiment_dir_suffix)
 
-            current_experiment.setup_model(version_spec)
+            current_experiment.setup_model(version_spec, experiment_dir)
             log("Exporting model for version: {}".format(version_name))
             current_experiment.export_model(version_spec)
             log("Exported model {}".format(version_name))
@@ -183,8 +183,8 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
             if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
                 current_experiment.clean_experiment_dir(experiment_dir)
                 log("Cleaned experiment dir", modifier_1 = console_colors.RED_FG)
-            current_experiment.pre_execution_hook(version_spec, experiment_dir)
             current_experiment.setup_model(version_spec)
+            current_experiment.pre_execution_hook(version_spec, experiment_dir)
             os.makedirs(experiment_dir, exist_ok = True)
             current_experiment.copy_related_files(experiment_dir)
             if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
