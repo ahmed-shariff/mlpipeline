@@ -161,9 +161,9 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
                               for exp in mlflow_client.list_experiments() if current_experiment.name == exp.name]
                 if len(experiment_ids) > 0:
                     run_infos = mlflow_client.list_run_infos(experiment_ids[0])
-                    run_uuids = [run_info.run_uuid for run_info in run_infos \
-                                 for run_tag in mlflow_client.get_run(run_info.run_uuid).data.tags \
-                                 if run_tag.key == mlflow.utils.mlflow_tags.MLFLOW_RUN_NAME and run_tag.value == version_name]
+                    run_uuids = [run_info.run_uuid for run_info in run_infos
+                                 if mlflow_client.get_run(run_info.run_uuid).data.tags[
+                                         mlflow.utils.mlflow_tags.MLFLOW_RUN_NAME] == version_name]
                     for run_uuid in run_uuids:
                         mlflow_client.delete_run(run_uuid)
                 mlflow.start_run(run_name = version_name, source_name = current_experiment.name)
@@ -183,7 +183,7 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
             if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
                 current_experiment.clean_experiment_dir(experiment_dir)
                 log("Cleaned experiment dir", modifier_1 = console_colors.RED_FG)
-            current_experiment.setup_model(version_spec)
+            current_experiment.setup_model(version_spec, experiment_dir)
             current_experiment.pre_execution_hook(version_spec, experiment_dir)
             os.makedirs(experiment_dir, exist_ok = True)
             current_experiment.copy_related_files(experiment_dir)
@@ -198,7 +198,10 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
             classification_steps = _get_training_steps(ExecutionModeKeys.TRAIN, current_experiment, clean_experiment_dir, version_spec)
             log("Steps: {0}".format(classification_steps))
             if classification_steps > 0:
-                train_output = current_experiment.train_loop(dataloader.get_train_input(), classification_steps, version_spec)
+                train_output = current_experiment.train_loop(
+                    dataloader.get_train_input(mode=ExecutionModeKeys.TRAIN),
+                    classification_steps,
+                    version_spec)
                 if isinstance(train_output, MetricContainer):
                     train_output = train_output.log_metrics(log_to_file = False, complete_epoc = True)
                 if isinstance(train_output, str):
@@ -460,6 +463,16 @@ def _execute_exeperiment(file_path,
     CONFIG.history_file = EXPERIMENTS_DIR_OUTPUTS + "/history-{0}".format(hostName)
     CONFIG.training_history_log_file = EXPERIMENTS_DIR_OUTPUTS + "/t_history-{0}".format(hostName)
     CONFIG.log_file = EXPERIMENTS_DIR_OUTPUTS + "/log-{0}".format(hostName)
+
+    if no_log:
+        CONFIG.no_log = True
+    else:
+        CONFIG.no_log = False
+
+    CONFIG.logger = set_logger(experiment_mode=CONFIG.experiment_mode,
+                               no_log=CONFIG.no_log,
+                               log_file=CONFIG.log_file)
+
     if not os.path.exists(EXPERIMENTS_DIR_OUTPUTS):
         os.makedirs(EXPERIMENTS_DIR_OUTPUTS)
     open(CONFIG.output_file, "a").close()
@@ -502,12 +515,6 @@ def _execute_exeperiment(file_path,
                            CONFIG.executed_experiments[name].version.executed(v) is not _VersionLog.EXECUTED:
                             CONFIG.executed_experiments[name].version.addExecutingVersion(v,t)
 
-    if no_log:
-        CONFIG.no_log = True
-    else:
-        CONFIG.no_log = False
-        
-    CONFIG.logger = set_logger(experiment_mode = CONFIG.experiment_mode, no_log = CONFIG.no_log, log_file = CONFIG.log_file)
     add_script_dir_to_PATH(CONFIG.experiments_dir)
     return _experiment_main_loop(file_path, whitelist_versions = whitelist_versions, blacklist_versions = blacklist_versions)
     

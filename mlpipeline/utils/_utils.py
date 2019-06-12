@@ -544,7 +544,7 @@ class MetricContainer(EasyDict):
         for metric in self._get_matrics_subset(metrics):
             metric.reset()
 
-    def log_metrics(self, metrics = None, log_to_file = True, complete_epoc = False, items_per_row = 3, charachters_per_row = 50, name_prefix = ""):
+    def log_metrics(self, metrics = None, log_to_file = True, complete_epoc = False, items_per_row = 3, charachters_per_row = 50, name_prefix = "", step=None):
         return_string = ""
         printable_string = ""
         row_item_count = 0
@@ -559,7 +559,7 @@ class MetricContainer(EasyDict):
             s = "{}: {:.4f}    ".format(name, value)
             # EXPERIMENT_MODE is set in the pipeline subprocess script
             if use_mlflow and log_to_file and LOGGER.EXPERIMENT_MODE != ExperimentModeKeys.TEST:
-                mlflow.log_metric(name, value)
+                mlflow.log_metric(name, value, step=step)
             row_char_count += len(s)
             if row_char_count > charachters_per_row:
                 log(message = printable_string, log_to_file = log_to_file)
