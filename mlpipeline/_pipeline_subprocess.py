@@ -136,7 +136,7 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
       
         batch_size = version_spec[version_parameters.BATCH_SIZE]
         experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
-        dataloader = version_spec[version_parameters.DATALOADER]
+        dataloader = version_spec[version_parameters.DATALOADER]()
 
         log("Version_spec: {}".format(version_spec))
 
@@ -166,7 +166,7 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
                                          mlflow.utils.mlflow_tags.MLFLOW_RUN_NAME] == version_name]
                     for run_uuid in run_uuids:
                         mlflow_client.delete_run(run_uuid)
-                mlflow.start_run(run_name = version_name, source_name = current_experiment.name)
+                mlflow.start_run(run_name=version_name)
 
                 # Logging the versions params
                 for k,v in version_spec.items():
