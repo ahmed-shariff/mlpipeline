@@ -1,6 +1,7 @@
 import string
 import random
 import itertools
+import importlib.util
 import logging
 import sys
 import os
@@ -379,7 +380,7 @@ def _collect_related_files(experiment, root, additional_files = []):
     assert isinstance(additional_files, list)
     modules_list = additional_files
     root = os.path.abspath(root)
-    for module in sys.modules.values():
+    for module in list(sys.modules.values()).copy():
         try:
             file_name =  os.path.abspath(module.__file__)
             if root in file_name:
@@ -467,7 +468,7 @@ class Metric():
             return 0
 
     def get_tracking_average(self):
-        if len(self.track_value_list) < self.track_average_epoc_count/2:
+        if len(self.track_value_list) < self.track_average_epoc_count:
             return 0
         try:
             return statistics.mean(self.track_value_list)#sum(self.track_value_list)/len(self.track_value_list)
@@ -610,9 +611,16 @@ class ExperimentWrapper():
     '''
     To be used when using the programmetic interface to execute the pipeline
     '''
-    def __init__(self, file_path, whitelist_versions = None, blacklist_versions = None):
+    def __init__(self, file_path, whitelist_versions=None, blacklist_versions=None):
         self.file_path = file_path
         if whitelist_versions is not None and blacklist_versions is not None:
             raise ValueError("Both `whitelist_versions` and `blacklist_versions` cannot be set!")
         self.whitelist_versions = whitelist_versions
         self.blacklist_versions = blacklist_versions
+
+
+def _load_file_as_module(file_path):
+    spec = importlib.util.spec_from_file_location(file_path.split("/")[-1], file_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module

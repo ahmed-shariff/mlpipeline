@@ -1,6 +1,5 @@
 import os
 import sys
-import importlib.util
 import shutil
 import socket
 import argparse
@@ -24,7 +23,8 @@ from mlpipeline.utils import (ExperimentModeKeys,
                               add_script_dir_to_PATH,
                               use_mlflow,
                               MetricContainer,
-                              _PipelineConfig)
+                              _PipelineConfig,
+                              _load_file_as_module)
 
 CONFIG = _PipelineConfig()
 
@@ -169,8 +169,8 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
                 mlflow.start_run(run_name=version_name)
 
                 # Logging the versions params
-                for k,v in version_spec.items():
-                    mlflow.log_param(k,str(v))
+                for k, v in version_spec.items():
+                    mlflow.log_param(k, str(v))
                 
         eval_complete=False
         #LOGGER.setLevel(logging.INFO)
@@ -199,11 +199,11 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
             log("Steps: {0}".format(classification_steps))
             if classification_steps > 0:
                 train_output = current_experiment.train_loop(
-                    dataloader.get_train_input(mode=ExecutionModeKeys.TRAIN),
-                    classification_steps,
-                    version_spec)
+                    input_fn=dataloader.get_train_input(mode=ExecutionModeKeys.TRAIN),
+                    steps=classification_steps,
+                    version=version_spec)
                 if isinstance(train_output, MetricContainer):
-                    train_output = train_output.log_metrics(log_to_file = False, complete_epoc = True)
+                    train_output = train_output.log_metrics(log_to_file=False, complete_epoc=True)
                 if isinstance(train_output, str):
                     log("Experiment traning loop output: {0}".format(train_output))
                 log(log_special_tokens.TRAINING_COMPLETE)
@@ -212,12 +212,12 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
 
             try:
                 log("Training evaluation started: {0} steps".format(train_eval_steps))
-                train_results = current_experiment.evaluate_loop(dataloader.get_train_input(mode = ExecutionModeKeys.TEST),
-                                                                 steps = train_eval_steps,
-                                                                 version = version_spec)
+                train_results = current_experiment.evaluate_loop(dataloader.get_train_input(mode=ExecutionModeKeys.TEST),
+                                                                 steps=train_eval_steps,
+                                                                 version=version_spec)
                 log("Eval on train set: ")
                 if isinstance(train_results, MetricContainer):
-                    train_results = train_results.log_metrics(complete_epoc = True, name_prefix = "TRAIN_")
+                    train_results = train_results.log_metrics(complete_epoc=True, name_prefix="TRAIN_")
                 elif isinstance(train_results, str):
                     log("{0}".format(train_results))
                 else:
@@ -232,11 +232,11 @@ def _experiment_main_loop(file_path, whitelist_versions = None, blacklist_versio
             try:
                 log("Testing evaluation started: {0} steps".format(test__eval_steps))
                 eval_results = current_experiment.evaluate_loop(dataloader.get_test_input(),
-                                                                steps = test__eval_steps,
-                                                                 version = version_spec)
+                                                                steps=test__eval_steps,
+                                                                version=version_spec)
                 log("Eval on train set:")
                 if isinstance(eval_results, MetricContainer):
-                    eval_results = eval_results.log_metrics(complete_epoc = True, name_prefix = "TEST_")
+                    eval_results = eval_results.log_metrics(complete_epoc=True, name_prefix="TEST_")
                 elif isinstance(eval_results, str):
                     log("{0}".format(eval_results))
                 else:
@@ -285,7 +285,7 @@ def _get_training_steps(mode, experiment, clean_experiment_dir, version_spec):
     else:
         current_version = version_spec
         complete_steps =  current_version[version_parameters.EPOC_COUNT] * \
-            current_version[version_parameters.DATALOADER].get_train_sample_count() / \
+            current_version[version_parameters.DATALOADER]().get_train_sample_count() / \
             current_version[version_parameters.BATCH_SIZE]
         global_step = experiment.get_trained_step_count()
         if global_step is None or experiment.reset_steps:
@@ -302,9 +302,7 @@ def _get_training_steps(mode, experiment, clean_experiment_dir, version_spec):
       
 def _get_experiment(file_path, whitelist_versions = None, blacklist_versions = None, just_return_experiment=False):
     # Import and load the experiment
-    spec = importlib.util.spec_from_file_location(file_path.split("/")[-1],file_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = _load_file_as_module(file_path)
     clean_experiment_dir = False
     experiment = None
     try:
