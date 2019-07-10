@@ -1,4 +1,3 @@
-import subprocess
 from mlpipeline._pipeline import (_execute_subprocess, _init_pipeline)
 from mlpipeline._pipeline_subprocess import _execute_exeperiment
 from mlpipeline.utils import (ExperimentWrapper,
@@ -6,9 +5,9 @@ from mlpipeline.utils import (ExperimentWrapper,
 
 
 def mlpipeline_execute_pipeline(experiments,
-                                experiments_dir = None,
-                                experiment_mode = ExperimentModeKeys.TEST,
-                                no_log = False):
+                                experiments_dir=None,
+                                experiment_mode=ExperimentModeKeys.TEST,
+                                no_log=False):
     '''
     This function can be used to execute the same operation of executimg mlpipeline, programatically.
     '''
@@ -22,14 +21,14 @@ def mlpipeline_execute_pipeline(experiments,
 
 def mlpipeline_execute_exeperiment(file_path,
                                    experiments_dir,
-                                   experiment_mode = ExperimentModeKeys.TEST,
-                                   no_log = False,
-                                   whitelist_versions = None,
-                                   blacklist_versions = None):
+                                   experiment_mode=ExperimentModeKeys.TEST,
+                                   no_log=False,
+                                   whitelist_versions=None,
+                                   blacklist_versions=None):
     while _execute_exeperiment(file_path,
-                               experiments_dir = experiments_dir,
-                               experiment_mode = experiment_mode,
-                               no_log = no_log,
-                               whitelist_versions = whitelist_versions,
-                               blacklist_versions = blacklist_versions):
+                               experiments_dir=experiments_dir,
+                               experiment_mode=experiment_mode,
+                               no_log=no_log,
+                               whitelist_versions=whitelist_versions,
+                               blacklist_versions=blacklist_versions):
         pass

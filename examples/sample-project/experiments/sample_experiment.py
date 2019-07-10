@@ -1,18 +1,9 @@
-import math
-import itertools
+from mlpipeline.utils import (ExecutionModeKeys,
+                              Versions,
+                              MetricContainer)
+from mlpipeline.base import (ExperimentABC,
+                             DataLoaderABC)
 
-import os
-from inspect import getsourcefile
-
-import sys
-print(sys.path)
-
-from mlpipeline.utils import add_script_dir_to_PATH
-from mlpipeline.utils import ExecutionModeKeys
-from mlpipeline.utils import Versions
-from mlpipeline.utils import MetricContainer
-from mlpipeline.base import ExperimentABC
-from mlpipeline.base import DataLoaderABC
 
 class An_ML_Model():
     def __init__(self, hyperparameter="default value"):
@@ -20,6 +11,7 @@ class An_ML_Model():
 
     def train(self):
         return "Trained using {}".format(self.hyperparameter)
+
 
 class TestingDataLoader(DataLoaderABC):
     def __init__(self):
@@ -32,12 +24,12 @@ class TestingDataLoader(DataLoaderABC):
         return 1000
 
     def get_train_input(self, **kargs):
-        return lambda:"got input form train input function"
+        return lambda: "got input form train input function"
 
     def get_test_input(self):
-        return lambda:"got input form test input function"
-  
-  
+        return lambda: "got input form test input function"
+
+
 class TestingExperiment(ExperimentABC):
     def __init__(self, versions, **args):
         super().__init__(versions, **args)
@@ -45,17 +37,20 @@ class TestingExperiment(ExperimentABC):
     def setup_model(self, version):
         self.model = An_ML_Model()
         self.model.hyperparameter = version["hyperparameter"]
-        
+
     def pre_execution_hook(self, version, experiment_dir, exec_mode=ExecutionModeKeys.TEST):
         self.log("Pre execution")
         self.log("Version spec: {}".format(version))
-        
+
     def get_trained_step_count(self):
         return 10
 
     def train_loop(self, input_fn, steps, version):
-        metric_container = MetricContainer(metrics =  ['1', 'b', 'c'], track_average_epoc_count = 5)
-        metric_container = MetricContainer(metrics = [{'metrics': ['a', 'b', 'c']}, {'metrics': ['2', 'd', 'e'], 'track_average_epoc_count': 10}], track_average_epoc_count = 5)
+        metric_container = MetricContainer(metrics=['1', 'b', 'c'], track_average_epoc_count=5)
+        metric_container = MetricContainer(metrics=[{'metrics': ['a', 'b', 'c']},
+                                                    {'metrics': ['2', 'd', 'e'],
+                                                     'track_average_epoc_count': 10}],
+                                           track_average_epoc_count=5)
         self.log("steps: {}".format(steps))
         self.log("calling input fn")
         input_fn()
@@ -66,8 +61,8 @@ class TestingExperiment(ExperimentABC):
                 self.log("Epoc: {}   step: {}".format(epoc, idx))
                 self.log("a {}".format(metric_container.a.avg()))
                 self.log("b {}".format(metric_container.b.avg()))
-                
-                if idx%3 == 0:
+
+                if idx % 3 == 0:
                     metric_container.reset()
             metric_container.log_metrics(['a', '2'])
             metric_container.reset_epoc()
@@ -80,20 +75,21 @@ class TestingExperiment(ExperimentABC):
         self.log("calling input fn")
         input_fn()
         metrics = MetricContainer(['a', 'b'])
-        metrics.a.update(10,1)
-        metrics.b.update(2,1)
+        metrics.a.update(10, 1)
+        metrics.b.update(2, 1)
         return metrics
 
     def export_model(self, version):
         self.log("YAY! Exported!")
 
+
 dl = TestingDataLoader()
-v = Versions(dl, 1, 10,learning_rate = 0.01)
-v.add_version("version1", hyperparameter = "a hyperparameter")
-v.add_version("version2", custom_paramters = {"hyperparameter": None})
-v.add_version("version3", custom_paramters = {"hyperparameter": None})
-v.add_version("version4", custom_paramters = {"hyperparameter": None})
-v.filter_versions(blacklist_versions = ["version3"])
-v.filter_versions(whitelist_versions = ["version1", "version2"])
-v.add_version("version5", custom_paramters = {"hyperparameter": None})
-EXPERIMENT = TestingExperiment(versions = v)
+v = Versions(dl, 1, 10, learning_rate=0.01)
+v.add_version("version1", hyperparameter="a hyperparameter")
+v.add_version("version2", custom_paramters={"hyperparameter": None})
+v.add_version("version3", custom_paramters={"hyperparameter": None})
+v.add_version("version4", custom_paramters={"hyperparameter": None})
+v.filter_versions(blacklist_versions=["version3"])
+v.filter_versions(whitelist_versions=["version1", "version2"])
+v.add_version("version5", custom_paramters={"hyperparameter": None})
+EXPERIMENT = TestingExperiment(versions=v)
