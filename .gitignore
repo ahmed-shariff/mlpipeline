@@ -1,6 +1,10 @@
+# Generated files in example project
 examples/sample-project/experiments/exports/
 examples/sample-project/experiments/outputs/
+
+# emacs
 *~
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
