@@ -170,15 +170,17 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 experiment_ids = [exp.experiment_id
                                   for exp in mlflow_client.list_experiments()
                                   if current_experiment.name == exp.name]
+                run_id = None
                 if len(experiment_ids) > 0:
-                    run_infos = mlflow_client.list_run_infos(experiment_ids[0])
-                    run_uuids = [run_info.run_uuid for run_info in run_infos
-                                 if mlflow_client.get_run(run_info.run_uuid).data.tags[
-                                         mlflow.utils.mlflow_tags.MLFLOW_RUN_NAME] == version_name]
-                    for run_uuid in run_uuids:
-                        mlflow_client.delete_run(run_uuid)
-                mlflow.start_run(run_name=version_name)
-
+                    runs = mlflow_client.search_runs(experiment_ids,
+                                                     f"tags.mlflow.runName = '{version_name}'")
+                    assert len(runs) <= 1, "There cannot be more than one active run for a version"
+                    if len(runs) > 0:
+                        if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
+                            mlflow_client.delete_run(runs[0].info.run_uuid)
+                        else:
+                            run_id = runs[0].info.run_id
+                mlflow.start_run(run_name=version_name, run_id=run_id)
                 # Logging the versions params
                 for k, v in version_spec.items():
                     mlflow.log_param(k, str(v))
@@ -190,8 +192,12 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
 
         try:
             if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
-                current_experiment.clean_experiment_dir(experiment_dir)
-                log("Cleaned experiment dir", modifier_1=console_colors.RED_BG)
+                try:
+                    current_experiment.clean_experiment_dir(experiment_dir)
+                    log("Cleaned experiment dir", modifier_1=console_colors.RED_BG)
+                except NotImplementedError:
+                    log("`experiment.clean_experiment_dir` not implemened."
+                        "contents in the experiment_dir will not be changed", level=logging.WARNING)
             try:
                 current_experiment.setup_model(version_spec, experiment_dir)
             except NotImplementedError:
@@ -325,6 +331,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 raise
             else:
                 log("Exception: {0}".format(str(e)), logging.ERROR)
+                log(traceback.format_exc(), logging.ERROR)
                 if CONFIG.cmd_mode:
                     sys.exit(1)
                 else:
