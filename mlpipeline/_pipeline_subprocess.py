@@ -25,7 +25,7 @@ from mlpipeline.utils import (ExperimentModeKeys,
                               MetricContainer,
                               _PipelineConfig,
                               _load_file_as_module)
-
+from mlpipeline.base._utils import DummyDataloader
 CONFIG = _PipelineConfig()
 
 
@@ -113,7 +113,10 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                                                                current_experiment.name.split(".")[-2],
                                                                experiment_dir_suffix)
 
-            current_experiment.setup_model(version_spec, experiment_dir)
+            try:
+                current_experiment.setup_model(version_spec, experiment_dir)
+            except NotImplementedError:
+                log("`setup_model` not implemented. Ignoring.")
             log("Exporting model for version: {}".format(version_name))
             current_experiment.export_model(version_spec)
             log("Exported model {}".format(version_name))
@@ -137,9 +140,12 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 modifier_2=console_colors.BOLD)
 
         version_spec = current_experiment.versions.get_version(version_name)
-        batch_size = version_spec[version_parameters.BATCH_SIZE]
         experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
-        dataloader = version_spec[version_parameters.DATALOADER]()
+        dataloader = version_spec[version_parameters.DATALOADER]
+        if dataloader is not None:
+            dataloader = dataloader()
+        else:
+            dataloader = DummyDataloader()
 
         log("Version_spec: {}".format(version_spec))
 
@@ -185,29 +191,54 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
         try:
             if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
                 current_experiment.clean_experiment_dir(experiment_dir)
-                log("Cleaned experiment dir", modifier_1=console_colors.RED_FG)
-            current_experiment.setup_model(version_spec, experiment_dir)
-            current_experiment.pre_execution_hook(version_spec, experiment_dir)
+                log("Cleaned experiment dir", modifier_1=console_colors.RED_BG)
+            try:
+                current_experiment.setup_model(version_spec, experiment_dir)
+            except NotImplementedError:
+                log("`setup_model` not implemented. Ignoring.")
+            try:
+                current_experiment.pre_execution_hook(version_spec, experiment_dir)
+            except NotImplementedError:
+                log("`pre_execution_hook` not implemented. Ignoring.")
             os.makedirs(experiment_dir, exist_ok=True)
             current_experiment.copy_related_files(experiment_dir)
-            if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
-                test__eval_steps = 1
-                train_eval_steps = 1
-            else:
+            try:
                 test__eval_steps = dataloader.get_test_sample_count()
+            except NotImplementedError:
+                test__eval_steps = None
+            try:
                 train_eval_steps = dataloader.get_train_sample_count()
+            except NotImplementedError:
+                train_eval_steps = None
+            if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+                test__eval_steps = 1 if test__eval_steps is not None else None
+                train_eval_steps = 1 if train_eval_steps is not None else None
 
             _save_training_time(current_experiment, version_name)
             classification_steps = _get_training_steps(ExecutionModeKeys.TRAIN,
                                                        current_experiment,
+                                                       dataloader,
                                                        clean_experiment_dir,
                                                        version_spec)
-            log("Steps: {0}".format(classification_steps))
-            if classification_steps > 0:
-                train_output = current_experiment.train_loop(
-                    input_fn=dataloader.get_train_input(mode=ExecutionModeKeys.TRAIN),
-                    steps=classification_steps,
-                    version=version_spec)
+            log("Steps: {0}".format(classification_steps
+                                    if classification_steps is not None else 'unspecified'))
+
+            try:
+                input_fn = dataloader.get_train_input(mode=ExecutionModeKeys.TRAIN)
+            except NotImplementedError:
+                log('`get_train_input` not implemented for training. Ignoring')
+            if classification_steps is not None and classification_steps > 0:
+                try:
+                    train_output = current_experiment.train_loop(
+                        input_fn=input_fn,
+                        steps=classification_steps,
+                        version=version_spec)
+                except Exception as e:
+                    train_results = "Training loop failed: {0}".format(str(e))
+                    log(train_results, logging.ERROR)
+                    log(traceback.format_exc(), logging.ERROR)
+                    if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+                        raise
                 if isinstance(train_output, MetricContainer):
                     train_output = train_output.log_metrics(log_to_file=False, complete_epoc=True)
                 if isinstance(train_output, str):
@@ -217,9 +248,14 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 log("No training. Loaded previous experiment environment")
 
             try:
-                log("Training evaluation started: {0} steps".format(train_eval_steps))
+                input_fn = dataloader.get_train_input(mode=ExecutionModeKeys.TEST)
+            except NotImplementedError:
+                log('`get_train_input` not implemented for evaluation. Ignoring')
+            try:
+                log("Training evaluation started: {0} steps"
+                    .format(train_eval_steps if train_eval_steps is not None else 'unspecified'))
                 train_results = current_experiment.evaluate_loop(
-                    dataloader.get_train_input(mode=ExecutionModeKeys.TEST),
+                    input_fn=input_fn,
                     steps=train_eval_steps,
                     version=version_spec)
                 log("Eval on train set: ")
@@ -230,6 +266,8 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 else:
                     raise ValueError("The output of `evaluate_loop` should be"
                                      " a string or a `MetricContainer`")
+            except NotImplementedError:
+                log('`evaluate_loop` not implemented. Ignoring')
             except Exception as e:
                 train_results = "Training evaluation failed: {0}".format(str(e))
                 log(train_results, logging.ERROR)
@@ -238,8 +276,14 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                     raise
 
             try:
-                log("Testing evaluation started: {0} steps".format(test__eval_steps))
-                eval_results = current_experiment.evaluate_loop(dataloader.get_test_input(),
+                input_fn = dataloader.get_test_input()
+            except NotImplementedError:
+                log('`get_test_input` not implemented.')
+                input_fn = None
+            try:
+                log("Testing evaluation started: {0} steps".
+                    format(test__eval_steps if test__eval_steps is not None else 'unspecified'))
+                eval_results = current_experiment.evaluate_loop(input_fn=input_fn,
                                                                 steps=test__eval_steps,
                                                                 version=version_spec)
                 log("Eval on train set:")
@@ -250,6 +294,8 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 else:
                     raise ValueError("The output of `evaluate_loop` should"
                                      " be a string or a `MetricContainer`")
+            except NotImplementedError:
+                log('`evaluate_loop` not implemented. Ignoring')
             except Exception as e:
                 eval_results = "Test evaluation failed: {0}".format(str(e))
                 log(eval_results, logging.ERROR)
@@ -289,20 +335,38 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
     return True
 
 
-def _get_training_steps(mode, experiment, clean_experiment_dir, version_spec):
+def _get_training_steps(mode, experiment, dataloader, clean_experiment_dir, version_spec):
+    exceptions = 0
+    try:
+        epoc_count = version_spec[version_parameters.EPOC_COUNT]
+    except KeyError:
+        epoc_count = 1
+        exceptions += 1
+    try:
+        train_samples = dataloader.get_train_sample_count()
+        if train_samples is None:
+            raise NotImplementedError()
+    except (NotImplementedError, KeyError):
+        train_samples = 1
+        exceptions += 1
+    if exceptions == 2:
+        return None
+
     if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
         return 1
     else:
-        current_version = version_spec
-        complete_steps = current_version[version_parameters.EPOC_COUNT] * \
-            current_version[version_parameters.DATALOADER]().get_train_sample_count() / \
-            current_version[version_parameters.BATCH_SIZE]
-        global_step = experiment.get_trained_step_count()
+        try:
+            batch_size = version_spec[version_parameters.BATCH_SIZE]
+        except KeyError:
+            batch_size = 1
+        complete_steps = batch_size * epoc_count * train_samples
+        try:
+            global_step = experiment.get_trained_step_count()
+        except NotImplementedError:
+            global_step = 0
         if global_step is None or experiment.reset_steps:
             return complete_steps
-
-        # TODO: why did i add the reset_step here?
-        elif clean_experiment_dir and not experiment.allow_delete_experiment_dir and experiment.reset_steps:
+        elif clean_experiment_dir and not experiment.allow_delete_experiment_dir:
             return complete_steps
         else:
             if complete_steps > global_step:
@@ -344,9 +408,9 @@ def _get_experiment(file_path,
                                  blacklist_versions=blacklist_versions)
 
     log("{0}{1}Processing experiment: {2}{3}".format(console_colors.BOLD,
-						     console_colors.BLUE_FG,
-						     experiment.name,
-						     console_colors.RESET))
+                                                     console_colors.BLUE_FG,
+                                                     experiment.name,
+                                                     console_colors.RESET))
 
     if CONFIG.experiment_mode == ExperimentModeKeys.EXPORT:
         return experiment, versions.get_versions(), False

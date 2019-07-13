@@ -2,7 +2,8 @@ from mlpipeline.utils import (ExecutionModeKeys,
                               Versions,
                               MetricContainer)
 from mlpipeline.base import (ExperimentABC,
-                             DataLoaderABC)
+                             DataLoaderABC,
+                             DataLoaderCallableWrapper)
 
 
 class An_ML_Model():
@@ -34,7 +35,7 @@ class TestingExperiment(ExperimentABC):
     def __init__(self, versions, **args):
         super().__init__(versions, **args)
 
-    def setup_model(self, version):
+    def setup_model(self, version, experiment_dir):
         self.model = An_ML_Model()
         self.model.hyperparameter = version["hyperparameter"]
 
@@ -83,7 +84,7 @@ class TestingExperiment(ExperimentABC):
         self.log("YAY! Exported!")
 
 
-dl = TestingDataLoader()
+dl = DataLoaderCallableWrapper(TestingDataLoader)
 v = Versions(dl, 1, 10, learning_rate=0.01)
 v.add_version("version1", hyperparameter="a hyperparameter")
 v.add_version("version2", custom_paramters={"hyperparameter": None})

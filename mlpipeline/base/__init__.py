@@ -1,4 +1,5 @@
-from mlpipeline.base._base import ExperimentABC
-from mlpipeline.base._base import DataLoaderABC
+from mlpipeline.base._base import (ExperimentABC,
+                                   DataLoaderABC)
+from mlpipeline.base._utils import DataLoaderCallableWrapper
 
-__all__ = [ExperimentABC, DataLoaderABC]
+__all__ = [ExperimentABC, DataLoaderABC, DataLoaderCallableWrapper]
