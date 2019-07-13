@@ -10,12 +10,7 @@ import shutil
 from easydict import EasyDict
 from inspect import getsourcefile
 from datetime import datetime
-
-try:
-    import mlflow
-    use_mlflow = True
-except ImportError:
-    use_mlflow = False
+import mlflow
 
 LOGGER = None
 
@@ -254,8 +249,7 @@ class _VersionLog():
 
 def set_logger(experiment_mode=ExperimentModeKeys.TEST, no_log=True, log_file=None):
     global LOGGER
-    global use_mlflow
-    formatter = logging.Formatter(fmt="%(asctime)s:{0}{1}%(levelname)s:{2}%(name)s{3}- %(message)s" \
+    formatter = logging.Formatter(fmt="%(asctime)s:{0}{1}%(levelname)s:{2}%(name)s{3}- %(message)s"
                                   .format(console_colors.BOLD,
                                           console_colors.BLUE_FG,
                                           console_colors.GREEN_FG,
@@ -270,10 +264,13 @@ def set_logger(experiment_mode=ExperimentModeKeys.TEST, no_log=True, log_file=No
     handler.setLevel(logging.INFO)
     LOGGER.addHandler(handler)
     LOGGER.EXPERIMENT_MODE = experiment_mode
-    use_mlflow = experiment_mode != ExperimentModeKeys.TEST
     LOGGER.NO_LOG = no_log
     LOGGER.LOG_FILE = log_file
     return LOGGER
+
+
+def is_no_log():
+    return LOGGER.EXPERIMENT_MODE == ExecutionModeKeys.TEST or LOGGER.NO_LOG
 
 
 def _genName():
@@ -305,7 +302,7 @@ def log(message, level=logging.INFO, log_to_file=True, agent=None, modifier_1=No
             level=logging.WARN, modifier_1=console_colors.RED_FG)
     LOGGER.log(level, message)
     # EXPERIMENT_MODE and NO_LOG will be set in the pipline subprocess script
-    if LOGGER.EXPERIMENT_MODE != ExperimentModeKeys.TEST and not LOGGER.NO_LOG and log_to_file:
+    if not is_no_log() and log_to_file:
         with open(LOGGER.LOG_FILE, 'a', encoding="utf-8") as log_file:
             level = ["INFO" if level is logging.INFO else "ERROR"]
             time = datetime.now().isoformat()
@@ -347,13 +344,12 @@ def copy_related_files(experiment, dst_dir):
     assert os.path.isdir(dst_dir)
     log("Copying imported custom scripts to {}".format(dst_dir))
     for file in experiment.__related_files:
-        if LOGGER.EXPERIMENT_MODE == ExperimentModeKeys.TEST:
+        if is_no_log():
             log("Not copying in TEST mode: file - {}".format(file))
         else:
             shutil.copy(file, dst_dir)
             log("\tCopied {}".format(file))
-            if use_mlflow:
-                mlflow.log_artifact(file)
+            mlflow.log_artifact(file)
 
 
 class Metric():
@@ -431,6 +427,7 @@ class Metric():
         except statistics.StatisticsError:
             return 0
 
+
 class MetricContainer(EasyDict):
     def __setattr__(self, name, value):
         # Blocking setting new attributes may not be pythonic, just too lazy to figure out the pythonic way
@@ -506,7 +503,7 @@ class MetricContainer(EasyDict):
 
             s = "{}: {:.4f}    ".format(name, value)
             # EXPERIMENT_MODE is set in the pipeline subprocess script
-            if use_mlflow and log_to_file and LOGGER.EXPERIMENT_MODE != ExperimentModeKeys.TEST:
+            if log_to_file and not is_no_log():
                 mlflow.log_metric(name, value, step=step)
             row_char_count += len(s)
             if row_char_count > charachters_per_row:

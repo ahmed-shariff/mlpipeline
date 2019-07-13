@@ -21,7 +21,7 @@ from mlpipeline.utils import (ExperimentModeKeys,
                               log,
                               set_logger,
                               add_script_dir_to_PATH,
-                              use_mlflow,
+                              is_no_log,
                               MetricContainer,
                               _PipelineConfig,
                               _load_file_as_module)
@@ -161,7 +161,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                                                                current_experiment.name.split(".")[-2],
                                                                experiment_dir_suffix)
             record_training = True
-            if use_mlflow:
+            if not is_no_log():
                 tracking_uri = os.path.abspath("{}/{}".format(output_dir, "mlruns"))
                 mlflow.set_tracking_uri(tracking_uri)
                 mlflow.set_experiment(current_experiment.name)
@@ -329,7 +329,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                     sys.exit(1)
                 else:
                     return False
-        if CONFIG.experiment_mode == ExperimentModeKeys.RUN and use_mlflow:
+        if CONFIG.experiment_mode == ExperimentModeKeys.RUN and not is_no_log():
             mlflow.end_run()
     log_special_tokens.log_experiment_ended()
     return True

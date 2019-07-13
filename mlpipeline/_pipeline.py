@@ -10,6 +10,7 @@ import logging
 from mlpipeline.utils import (log,
                               log_special_tokens,
                               set_logger,
+                              is_no_log,
                               ExperimentModeKeys,
                               _PipelineConfig)
 
@@ -32,7 +33,7 @@ def _mlpipeline_main_loop():
         output = _execute_subprocess(current_experiment_name)
         if output == 3 or output == 1:
             completed_experiments.append(current_experiment_name)
-        if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+        if is_no_log():
             break
         current_experiment_name = _get_experiment(completed_experiments)
 
