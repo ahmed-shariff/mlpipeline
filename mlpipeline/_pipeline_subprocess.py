@@ -26,6 +26,7 @@ from mlpipeline.utils import (ExperimentModeKeys,
                               _PipelineConfig,
                               _load_file_as_module)
 from mlpipeline.base._utils import DummyDataloader
+import mlpipeline._default_configurations as _default_config
 CONFIG = _PipelineConfig()
 
 
@@ -505,7 +506,8 @@ def _save_results_to_file(resultString, experiment):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
+    parser = argparse.ArgumentParser(description="Machine Learning Pipeline\n"
+                                     "(DEPRECATED) use `mlpipeline`")
     parser.add_argument("file_path", help='The file path of the experiment to be executed')
     parser.add_argument("experiments_dir",
                         help='The directory in which the experiments reside,'
@@ -541,14 +543,13 @@ def main():
     else:
         experiment_mode = ExperimentModeKeys.TEST
 
-    CONFIG.cmd_mode = True
-
     _execute_exeperiment(argv.file_path,
                          argv.experiments_dir,
                          experiment_mode,
                          argv.no_log,
                          whitelist_versions=argv.whitelist_versions,
-                         blacklist_versions=argv.blacklist_versions)
+                         blacklist_versions=argv.blacklist_versions,
+                         _cmd_mode=True)
 
 
 def _execute_exeperiment(file_path,
@@ -556,7 +557,9 @@ def _execute_exeperiment(file_path,
                          experiment_mode=ExperimentModeKeys.TEST,
                          no_log=False,
                          whitelist_versions=None,
-                         blacklist_versions=None):
+                         blacklist_versions=None,
+                         experiments_output_dir=None,
+                         _cmd_mode=False):
     '''
     Returns False if there are no more versions to execute or a version resulted in an exception
     Returns True otherwise.
@@ -565,12 +568,13 @@ def _execute_exeperiment(file_path,
     CONFIG.experiment_mode = experiment_mode
     CONFIG.executed_experiments = {}
     hostName = socket.gethostname()
-    EXPERIMENTS_DIR_OUTPUTS = CONFIG.experiments_dir + "/outputs"
-    CONFIG.output_file = EXPERIMENTS_DIR_OUTPUTS + "/output-{0}".format(hostName)
-    CONFIG.history_file = EXPERIMENTS_DIR_OUTPUTS + "/history-{0}".format(hostName)
-    CONFIG.training_history_log_file = EXPERIMENTS_DIR_OUTPUTS + "/t_history-{0}".format(hostName)
-    CONFIG.log_file = EXPERIMENTS_DIR_OUTPUTS + "/log-{0}".format(hostName)
-
+    EXPERIMENTS_DIR_OUTPUTS = experiments_output_dir or _default_config.OUTPUT_DIR.format(experiments_dir)
+    CONFIG.experiments_outputs_dir = EXPERIMENTS_DIR_OUTPUTS
+    CONFIG.output_file = os.path.join(EXPERIMENTS_DIR_OUTPUTS, "output-{0}".format(hostName))
+    CONFIG.history_file = os.path.join(EXPERIMENTS_DIR_OUTPUTS, "history-{0}".format(hostName))
+    CONFIG.training_history_log_file = os.path.join(EXPERIMENTS_DIR_OUTPUTS, "t_history-{0}".format(hostName))
+    CONFIG.log_file = os.path.join(EXPERIMENTS_DIR_OUTPUTS, "log-{0}".format(hostName))
+    CONFIG.cmd_mode = _cmd_mode
     if no_log:
         CONFIG.no_log = True
     else:
@@ -587,7 +591,7 @@ def _execute_exeperiment(file_path,
     open(CONFIG.training_history_log_file, "a").close()
     open(CONFIG.log_file, "a").close()
 
-    if True:  # argv.use_history:
+    if CONFIG.experiment_mode != ExperimentModeKeys.TEST:  # argv.use_history:
         if not os.path.isfile(CONFIG.history_file) and not os.path.isfile(CONFIG.training_history_log_file):
             print("\033[1;31mWARNING: No 'history' file in 'experiments' folder. No history read\033[0m")
         else:

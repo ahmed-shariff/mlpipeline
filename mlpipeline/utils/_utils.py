@@ -10,6 +10,7 @@ import shutil
 from easydict import EasyDict
 from inspect import getsourcefile
 from datetime import datetime
+import mlpipeline._default_configurations as _default_config
 import mlflow
 
 LOGGER = None
@@ -183,7 +184,7 @@ class Versions():
         If whitelist_versions is passed, the versions not listed will be dropped from the versions.
         If nither parameters are passed, no changes will be made.
         '''
-        if blacklist_versions is not None and whitelist_versions is not None:
+        if blacklist_versions and whitelist_versions:
             raise ValueError("Cannot pass both `whitelist_versions` and `blacklist_versions`!")
         elif blacklist_versions is None and whitelist_versions is None:
             return
@@ -537,20 +538,31 @@ class _PipelineConfig():
     '''
     Used by pipeline to maintin the configurations across multiple functions
     '''
-
-    def __init__(self):
-        import mlpipeline._default_configurations as config
-        self.experiments_dir = config.EXPERIMENTS_DIR
-        self.output_file = config.OUTPUT_FILE
-        self.history_file = config.HISTORY_FILE
-        self.training_history_log_file = config.TRAINING_HISTORY_LOG_FILE
-        self.no_log = config.NO_LOG
-        self.executed_experiments = config.EXECUTED_EXPERIMENTS
-        self.use_blacklist = config.USE_BLACKLIST
-        self.listed_experiments = config.LISTED_EXPERIMENTS
-        self.experiment_mode = config.EXPERIMENT_MODE
-        self.logger = None
-        self.cmd_mode = False
+    def __init__(self,
+                 experiments_dir=_default_config.EXPERIMENTS_DIR,
+                 experiments_outputs_dir=_default_config.OUTPUT_DIR,
+                 output_file=None,
+                 history_file=None,
+                 training_history_log_file=None,
+                 no_log=_default_config.NO_LOG,
+                 executed_experiments={},
+                 use_blacklist=False,
+                 listed_experiments=[],
+                 experiment_mode=ExperimentModeKeys.TEST,
+                 logger=None,
+                 cmd_mode=False):
+        self.experiments_dir = experiments_dir
+        self.experiments_outputs_dir = experiments_outputs_dir
+        self.output_file = output_file
+        self.history_file = history_file
+        self.training_history_log_file = training_history_log_file
+        self.no_log = no_log
+        self.executed_experiments = executed_experiments
+        self.use_blacklist = use_blacklist
+        self.listed_experiments = listed_experiments
+        self.experiment_mode = experiment_mode
+        self.logger = logger
+        self.cmd_mode = cmd_mode
 
 
 class ExperimentWrapper():
@@ -559,7 +571,7 @@ class ExperimentWrapper():
     '''
     def __init__(self, file_path, whitelist_versions=None, blacklist_versions=None):
         self.file_path = file_path
-        if whitelist_versions is not None and blacklist_versions is not None:
+        if whitelist_versions and blacklist_versions:
             raise ValueError("Both `whitelist_versions` and `blacklist_versions` cannot be set!")
         self.whitelist_versions = whitelist_versions
         self.blacklist_versions = blacklist_versions

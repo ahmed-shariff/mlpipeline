@@ -12,14 +12,15 @@ setuptools.setup(
     author_email='shariff.mfa@outlook.com',
     packages=setuptools.find_packages(),
     description='A framework to define a machine learning pipeline',
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/ahmed-shariff/ml-pipeline',
-    install_requires=['easydict>=1.8'],
+    install_requires=['easydict>=1.8', 'mlflow>=1.0.0'],
     entry_points={
-        'console_scripts':[
-            'mlpipeline=mlpipeline._pipeline:main',
-            '_mlpipeline_subprocess=mlpipeline._pipeline_subprocess:main'
+        'console_scripts': [
+            'mlpipeline_old=mlpipeline._pipeline:main',
+            '_mlpipeline_subprocess_old=mlpipeline._pipeline_subprocess:main',
+            'mlpipeline=mlpipeline.cli:cli'
             ]
         },
     classifiers=[
@@ -30,6 +31,5 @@ setuptools.setup(
         "Operating System :: POSIX :: Linux",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
-        
     ]
 )

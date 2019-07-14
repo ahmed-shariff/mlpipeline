@@ -1,6 +1,5 @@
 import os
 import sys
-
 import subprocess
 import configparser
 import socket
@@ -12,8 +11,9 @@ from mlpipeline.utils import (log,
                               set_logger,
                               is_no_log,
                               ExperimentModeKeys,
+                              ExperimentWrapper,
                               _PipelineConfig)
-
+import mlpipeline._default_configurations as _default_config
 # why not check for this
 if sys.version_info < (3, 5):
     sys.stderr.write("ERROR: python version should be greater than or equal 3.5\n")
@@ -25,27 +25,36 @@ USE_HISTORY = False
 CONFIG = _PipelineConfig()
 
 
-def _mlpipeline_main_loop():
+def _mlpipeline_main_loop(experiments=None):
     completed_experiments = []
-    current_experiment_name = _get_experiment()
-    while current_experiment_name is not None:
+    if experiments is not None:
+        assert any([isinstance(e, ExperimentWrapper) for e in experiments])
+    current_experiment = _get_experiment(experiments=experiments)
+    while current_experiment is not None:
         # exec subprocess
-        output = _execute_subprocess(current_experiment_name)
+        current_experiment_name = current_experiment.file_path
+        output = _execute_subprocess(current_experiment_name,
+                                     current_experiment.whitelist_versions,
+                                     current_experiment.blacklist_versions)
         if output == 3 or output == 1:
             completed_experiments.append(current_experiment_name)
         if is_no_log():
             break
-        current_experiment_name = _get_experiment(completed_experiments)
+        current_experiment = _get_experiment(experiments=experiments,
+                                             completed_experiments=completed_experiments)
 
 
 def _execute_subprocess(experiment_name, whitelist_versions=None, blacklist_versions=None):
-    args = ["_mlpipeline_subprocess", experiment_name, CONFIG.experiments_dir]
+    args = ["mlpipeline", "--experiments", experiment_name, "--experiments-dir", CONFIG.experiments_dir]
     if CONFIG.no_log:
-        args.append("-n")
+        args.append("--no-log")
+    args.append("single")
     if CONFIG.experiment_mode == ExperimentModeKeys.RUN:
-        args.append("-r")
+        args.append("run")
     elif CONFIG.experiment_mode == ExperimentModeKeys.EXPORT:
-        args.append("-e")
+        args.append("export")
+    else:
+        args.append("test")
 
     if whitelist_versions is not None:
         args.append("--whitelist-versions")
@@ -60,9 +69,14 @@ def _execute_subprocess(experiment_name, whitelist_versions=None, blacklist_vers
     return subprocess.call(args, universal_newlines=True)
 
 
-def _get_experiment(completed_experiments=[]):
+def _get_experiment(experiments=None, completed_experiments=[]):
     if CONFIG.cmd_mode:
         _config_update()
+    if experiments is not None:
+        for experiment in experiments:
+            if experiment.file_path not in completed_experiments:
+                return experiment
+        return None
     for rdir, dirs, files in os.walk(CONFIG.experiments_dir):
         for f in files:
             if f.endswith(".py"):
@@ -75,7 +89,6 @@ def _get_experiment(completed_experiments=[]):
                 if not CONFIG.use_blacklist and file_path not in CONFIG.listed_experiments:
                     continue
                 skip_experiment_for_now = False
-
                 # Ensure the files loaded are in the order they are
                 # specified in the config file
                 for listed_experiment_file in CONFIG.listed_experiments:
@@ -87,7 +100,7 @@ def _get_experiment(completed_experiments=[]):
                         break
                 if skip_experiment_for_now:
                     continue
-                return file_path
+                return ExperimentWrapper(file_path)
     return None
 
 
@@ -135,13 +148,14 @@ def _config_update():
                 level=logging.ERROR)
 
 
-def _init_pipeline(experiment_mode, experiment_dir=None, no_log=False):
+def _init_pipeline(experiment_mode, experiments_dir=None, no_log=False, experiments_output_dir=None, _cmd_mode=False):
     config = configparser.ConfigParser(allow_no_value=True)
     config_file = config.read("mlp.config")
 
     CONFIG.no_log = no_log
     CONFIG.experiment_mode = experiment_mode
-    if experiment_dir is None:
+    CONFIG.cmd_mode = _cmd_mode
+    if experiments_dir is None:
         if len(config_file) == 0:
             print("\033[1;031mWARNING:\033[0:031mNo 'mlp.config' file found\033[0m")
         else:
@@ -149,15 +163,18 @@ def _init_pipeline(experiment_mode, experiment_dir=None, no_log=False):
                 config["MLP"]
             except KeyError:
                 print("\033[1;031mWARNING:\033[0:031mNo MLP section in 'mlp.config' file\033[0m")
-            CONFIG.experiments_dir = config.get("MLP", "experiments_dir", fallback=CONFIG.experiments_dir)
+            CONFIG.experiments_dir = config.get("MLP", "experiments_dir",
+                                                fallback=_default_config.EXPERIMENTS_DIR)
     else:
-        CONFIG.experiments_dir = experiment_dir
+        CONFIG.experiments_dir = experiments_dir
 
     hostName = socket.gethostname()
-    EXPERIMENTS_DIR_OUTPUTS = CONFIG.experiments_dir + "/outputs"
+    EXPERIMENTS_DIR_OUTPUTS = experiments_output_dir or _default_config.OUTPUT_DIR.format(
+        CONFIG.experiments_dir)
+    CONFIG.experiments_outputs_dir = EXPERIMENTS_DIR_OUTPUTS
     if not os.path.exists(EXPERIMENTS_DIR_OUTPUTS):
         os.makedirs(EXPERIMENTS_DIR_OUTPUTS)
-    log_file = EXPERIMENTS_DIR_OUTPUTS + "/log-{0}".format(hostName)
+    log_file = os.path.join(EXPERIMENTS_DIR_OUTPUTS, "log-{0}".format(hostName))
     try:
         open(log_file, "a").close()
     except FileNotFoundError:
@@ -167,11 +184,14 @@ def _init_pipeline(experiment_mode, experiment_dir=None, no_log=False):
         else:
             raise
 
-    LOGGER = set_logger(experiment_mode=CONFIG.experiment_mode, no_log=CONFIG.no_log, log_file=log_file)
+    CONFIG.logger = set_logger(experiment_mode=CONFIG.experiment_mode,
+                               no_log=CONFIG.no_log,
+                               log_file=log_file)
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Machine Learning Pipeline")
+    parser = argparse.ArgumentParser(description="Machine Learning Pipeline\n"
+                                     "(DEPRECATED) use `mlpipeline`")
     parser.add_argument('-r', '--run',
                         help='Will set the pipeline to execute the pipline fully,'
                         ' if not set will be executed in test mode',
@@ -202,8 +222,7 @@ def main(argv=None):
     # else:
     #     USE_HISTORY = False
 
-    CONFIG.cmd_mode = True
-    _init_pipeline(experiment_mode, no_log=argv.no_log)
+    _init_pipeline(experiment_mode, no_log=argv.no_log, _cmd_mode=True)
     log_special_tokens.log_session_started()
     _mlpipeline_main_loop()
     log_special_tokens.log_session_ended()
