@@ -13,6 +13,11 @@ This framework chains the different operations (sub-problems) depending on the m
 
 In addition to providing different modes, the pipeline also supports logging and recording various details. Currently mlpipeline records all logs, metrics and artifacts using a bacis log files as well using `mlflow <https://github.com/databricks/mlflow>`_.
 
+The following information is recorded:
+- The scripts that were executed/impoerted in relation to an experiment.
+- The any output results
+- The metrics and parameters
+
 Documentation
 -------------
 The documentation is hosted at `ReadTheDocs <https://mlpipeline.readthedocs.io/>`_.
