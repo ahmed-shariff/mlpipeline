@@ -45,25 +45,30 @@ def get_test():
 # @click.option('--experiments_output_dir',
 #               help='The directory in which the log files, mlflow`s default directory and respective '
 #               'experiments directories are saved. Defaults to `<experiments_dir>/outputs`')
+@click.option('--mlflow_tracking_uri',
+              help='The tracking uri to be used by mlflow. If not set will attempt to get value '
+              'from `mlp.config`. If not refaults to `mlruns`')
 @click.pass_context
-def cli(ctx, no_log, experiments, experiments_dir):  # , experiments_output_dir):
+def cli(ctx, no_log, experiments, experiments_dir, mlflow_tracking_uri):  # , experiments_output_dir):
     config = _PipelineConfig()
     config.no_log = no_log
     config.listed_experiments = experiments
     config.experiments_dir = experiments_dir
     # config.output_file = experiments_output_dir
+    config.mlflow_tracking_uri = mlflow_tracking_uri
     ctx.obj = config
 
 
 @cli.resultcallback()
 @click.pass_context
-def process_pipeline(ctx, config, no_log, experiments, experiments_dir):  # , experiments_output_dir):
+def process_pipeline(ctx, config, no_log, experiments, experiments_dir, mlflow_tracking_uri):  # , experiments_output_dir):
     if ctx.invoked_subcommand == 'single':
         return
     _init_pipeline(config.experiment_mode,
                    experiments_dir=experiments_dir,
                    no_log=config.no_log,
                    # experiments_output_dir=experiments_output_dir,
+                   mlflow_tracking_uri=mlflow_tracking_uri,
                    _cmd_mode=True)
     log_special_tokens.log_session_started()
     if len(experiments) == 0:
@@ -105,6 +110,7 @@ def process_pipeline(config, whitelist_versions, blacklist_versions, **kwargs):
                                config.no_log,
                                whitelist_versions=whitelist_versions,
                                blacklist_versions=blacklist_versions,
+                               mlflow_tracking_uri=config.mlflow_tracking_uri,
                                _cmd_mode=True):
         # experiments_output_dir=experiments_output_dir):
         if config.experiment_mode == ExperimentModeKeys.TEST:

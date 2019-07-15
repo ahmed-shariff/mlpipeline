@@ -45,7 +45,10 @@ def _mlpipeline_main_loop(experiments=None):
 
 
 def _execute_subprocess(experiment_name, whitelist_versions=None, blacklist_versions=None):
-    args = ["mlpipeline", "--experiments", experiment_name, "--experiments-dir", CONFIG.experiments_dir]
+    args = ["mlpipeline",
+            "--experiments", experiment_name,
+            "--experiments-dir", CONFIG.experiments_dir,
+            "--mlflow_tracking_uri", CONFIG.mlflow_tracking_uri]
     if CONFIG.no_log:
         args.append("--no-log")
     args.append("single")
@@ -148,7 +151,8 @@ def _config_update():
                 level=logging.ERROR)
 
 
-def _init_pipeline(experiment_mode, experiments_dir=None, no_log=False, experiments_output_dir=None, _cmd_mode=False):
+def _init_pipeline(experiment_mode, experiments_dir=None, no_log=False, experiments_output_dir=None,
+                   mlflow_tracking_uri=None, _cmd_mode=False):
     config = configparser.ConfigParser(allow_no_value=True)
     config_file = config.read("mlp.config")
 
@@ -167,6 +171,12 @@ def _init_pipeline(experiment_mode, experiments_dir=None, no_log=False, experime
                                                 fallback=_default_config.EXPERIMENTS_DIR)
     else:
         CONFIG.experiments_dir = experiments_dir
+
+    if mlflow_tracking_uri is None:
+        CONFIG.mlflow_tracking_uri = os.path.abspath(config.get("MLFLOW", "tracking_uri",
+                                                                fallback=CONFIG.mlflow_tracking_uri))
+    else:
+        CONFIG.mlflow_tracking_uri = mlflow_tracking_uri
 
     hostName = socket.gethostname()
     EXPERIMENTS_DIR_OUTPUTS = experiments_output_dir or _default_config.OUTPUT_DIR.format(

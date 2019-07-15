@@ -160,7 +160,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                                                                current_experiment.name.split(".")[-2],
                                                                experiment_dir_suffix)
             record_training = True
-            tracking_uri = os.path.abspath("{}/{}".format(output_dir, "mlruns"))
+            tracking_uri = os.path.abspath(CONFIG.mlflow_tracking_uri)
         mlflow.set_tracking_uri(tracking_uri)
         mlflow.set_experiment(current_experiment.name)
         # Delete runs with the same name as the current version
@@ -557,6 +557,7 @@ def _execute_exeperiment(file_path,
                          whitelist_versions=None,
                          blacklist_versions=None,
                          experiments_output_dir=None,
+                         mlflow_tracking_uri=None,
                          _cmd_mode=False):
     '''
     Returns False if there are no more versions to execute or a version resulted in an exception
@@ -572,6 +573,7 @@ def _execute_exeperiment(file_path,
     CONFIG.history_file = os.path.join(EXPERIMENTS_DIR_OUTPUTS, "history-{0}".format(hostName))
     CONFIG.training_history_log_file = os.path.join(EXPERIMENTS_DIR_OUTPUTS, "t_history-{0}".format(hostName))
     CONFIG.log_file = os.path.join(EXPERIMENTS_DIR_OUTPUTS, "log-{0}".format(hostName))
+    CONFIG.mlflow_tracking_uri = mlflow_tracking_uri or CONFIG.mlflow_tracking_uri
     CONFIG.cmd_mode = _cmd_mode
     if no_log:
         CONFIG.no_log = True

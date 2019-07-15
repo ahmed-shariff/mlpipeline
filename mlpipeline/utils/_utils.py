@@ -549,6 +549,7 @@ class _PipelineConfig():
                  use_blacklist=False,
                  listed_experiments=[],
                  experiment_mode=ExperimentModeKeys.TEST,
+                 mlflow_tracking_uri='mlruns',
                  logger=None,
                  cmd_mode=False):
         self.experiments_dir = experiments_dir
@@ -561,6 +562,7 @@ class _PipelineConfig():
         self.use_blacklist = use_blacklist
         self.listed_experiments = listed_experiments
         self.experiment_mode = experiment_mode
+        self.mlflow_tracking_uri = mlflow_tracking_uri
         self.logger = logger
         self.cmd_mode = cmd_mode
 
