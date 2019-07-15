@@ -5,10 +5,7 @@ import socket
 import argparse
 import logging
 import traceback
-try:
-    import mlflow
-except ImportError:
-    pass
+import mlflow
 
 from datetime import datetime
 
@@ -153,6 +150,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
         record_training = False
         if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
             experiment_dir = "{0}/outputs/experiment_ckpts/temp".format(CONFIG.experiments_dir.rstrip("/"))
+            tracking_uri = os.path.abspath(os.path.join(experiment_dir, "mlruns_tmp"))
             shutil.rmtree(experiment_dir, ignore_errors=True)
         else:
             experiment_dir_suffix = "-" + experiment_dir_suffix \
@@ -162,29 +160,29 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                                                                current_experiment.name.split(".")[-2],
                                                                experiment_dir_suffix)
             record_training = True
-            if not is_no_log():
-                tracking_uri = os.path.abspath("{}/{}".format(output_dir, "mlruns"))
-                mlflow.set_tracking_uri(tracking_uri)
-                mlflow.set_experiment(current_experiment.name)
-                # Delete runs with the same name as the current version
-                mlflow_client = mlflow.tracking.MlflowClient(tracking_uri)
-                experiment_ids = [exp.experiment_id
-                                  for exp in mlflow_client.list_experiments()
-                                  if current_experiment.name == exp.name]
-                run_id = None
-                if len(experiment_ids) > 0:
-                    runs = mlflow_client.search_runs(experiment_ids,
-                                                     f"tags.mlflow.runName = '{version_name}'")
-                    assert len(runs) <= 1, "There cannot be more than one active run for a version"
-                    if len(runs) > 0:
-                        if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
-                            mlflow_client.delete_run(runs[0].info.run_uuid)
-                        else:
-                            run_id = runs[0].info.run_id
-                mlflow.start_run(run_name=version_name, run_id=run_id)
-                # Logging the versions params
-                for k, v in version_spec.items():
-                    mlflow.log_param(k, str(v))
+            tracking_uri = os.path.abspath("{}/{}".format(output_dir, "mlruns"))
+        mlflow.set_tracking_uri(tracking_uri)
+        mlflow.set_experiment(current_experiment.name)
+        # Delete runs with the same name as the current version
+        mlflow_client = mlflow.tracking.MlflowClient(tracking_uri)
+        experiment_ids = [exp.experiment_id
+                          for exp in mlflow_client.list_experiments()
+                          if current_experiment.name == exp.name]
+        current_experiment.mlflow_client = mlflow_client
+        run_id = None
+        if len(experiment_ids) > 0:
+            runs = mlflow_client.search_runs(experiment_ids,
+                                             f"tags.mlflow.runName = '{version_name}'")
+            assert len(runs) <= 1, "There cannot be more than one active run for a version"
+            if len(runs) > 0:
+                if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
+                    mlflow_client.delete_run(runs[0].info.run_uuid)
+                else:
+                    run_id = runs[0].info.run_id
+        mlflow.start_run(run_name=version_name, run_id=run_id)
+        # Logging the versions params
+        for k, v in version_spec.items():
+            mlflow.log_param(k, str(v))
 
         # eval_complete=False
         # LOGGER.setLevel(logging.INFO)
@@ -328,6 +326,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 _save_results_to_file(_add_to_and_return_result_string(), current_experiment)
 
         except Exception as e:
+            mlflow.end_run(mlflow.entities.RunStatus.to_string(mlflow.entities.RunStatus.FAILED))
             if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
                 raise
             else:
@@ -337,8 +336,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                     sys.exit(1)
                 else:
                     return False
-        if CONFIG.experiment_mode == ExperimentModeKeys.RUN and not is_no_log():
-            mlflow.end_run()
+        mlflow.end_run()
     log_special_tokens.log_experiment_ended()
     return True
 
