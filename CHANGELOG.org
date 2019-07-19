@@ -1,14 +1,36 @@
 * Change-log
+** 2.0.a.3 [2019-07-16]
+   - Several methods from the base classes are not required to be implemented. They are:
+     - Experiment.setup_model
+     - Experiment.pre_execution_hook
+     - Experiment.eval_loop
+     - Dataloader.get_test_sample_count
+     - Dataloader.get_train_sample_count
+   - dataloader now can be None in a version.
+   - Added DataLoadercallablewrapper class to base
+   - Added is_no_log
+   - Made mlflow as an install_dependency
+   - mlflow now can be used in test mode as well. The tracking uri is set to the temp dir in test mode.
+   - User now can set the mlflow tracking uri
+   - Migrated cli interface to click and fixed bugs with SDK
+** 2.0.a.2 [2019-07-10]
+   - Major refactor: helper module renamed as base
+   - Executed experiments in _pipeline_subprocess.py uses a class instead of dictionary
+   - Added export mode
+   - Added python API to execute mlpipeline
+   - Added parameter agent to mlpipeline.utils.log
+   - Fixed bugs as a result of new mlflow API
+   - Moved loading scripts to separate function in mlpipeline.utils
 ** 1.1a3.post8 [2019-03-04]
-- Major refactor: renamed model to experiment.
-- Functions to track and copy files imported by the experiment scripts.
-- All files imported by an experiment script and the experiment script itself will be copied to the `experiment_dir` directory
-- Removed the use_history feature for now.
-  - It seems to be buggy.
-- [[https://github.com/mlflow/mlflow][Mlflow]] integration.
-  - If mlflow exists and use_mlflow is not set to `False`:
-    - All mlflow related data will be stored in the outputs/mlrun directory
-    - Each experiment script is considered a mlflow-experiment.
-    - Each version executed form the experiment is considered a mlflow-run of the respective experiment.
-    - The Matric.log_matrics will log all the metrics to mlflow also.
-    - All the parameters passed through the version will be logged as parameters by mlflow.
+   - Major refactor: renamed model to experiment.
+   - Functions to track and copy files imported by the experiment scripts.
+   - All files imported by an experiment script and the experiment script itself will be copied to the `experiment_dir` directory
+   - Removed the use_history feature for now.
+     - It seems to be buggy.
+   - [[https://github.com/mlflow/mlflow][Mlflow]] integration.
+     - If mlflow exists and use_mlflow is not set to `False`:
+       - All mlflow related data will be stored in the outputs/mlrun directory
+       - Each experiment script is considered a mlflow-experiment.
+       - Each version executed form the experiment is considered a mlflow-run of the respective experiment.
+       - The Matric.log_matrics will log all the metrics to mlflow also.
+       - All the parameters passed through the version will be logged as parameters by mlflow.

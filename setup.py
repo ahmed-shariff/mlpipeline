@@ -14,7 +14,7 @@ setuptools.setup(
     description='A framework to define a machine learning pipeline',
     long_description=open('README.rst').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/ahmed-shariff/ml-pipeline',
+    url='https://github.com/ahmed-shariff/mlpipeline',
     install_requires=['easydict>=1.8', 'mlflow>=1.0.0'],
     entry_points={
         'console_scripts': [
