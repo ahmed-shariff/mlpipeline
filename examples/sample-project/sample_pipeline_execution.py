@@ -35,7 +35,7 @@ def train_pipeline_with_blacklist():
     subprocess.run(["rm", "-rf", "experiments/outputs"])
     mlpipeline_execute_pipeline([ExperimentWrapper("experiments/sample_experiment.py",
                                                    blacklist_versions=["version2", "version5"])],
-                                None,
+                                "experiments",
                                 ExperimentModeKeys.RUN)
 
 

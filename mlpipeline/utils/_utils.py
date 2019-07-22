@@ -329,7 +329,8 @@ def _collect_related_files(experiment, root, additional_files=[]):
         try:
             file_name = os.path.abspath(module.__file__)
             if root in file_name:
-                modules_list.append(file_name)
+                if os.path.exists(file_name):
+                    modules_list.append(file_name)
             else:
                 pass
         except Exception:

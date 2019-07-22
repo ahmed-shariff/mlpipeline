@@ -80,19 +80,17 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
     Returns False if there are no more versions to execute or a version resulted in an exception
     Returns True otherwise.
     '''
-    log_special_tokens.log_experiment_started()
     current_experiment, version_name_s, \
         clean_experiment_dir = _get_experiment(file_path,
                                                whitelist_versions=whitelist_versions,
                                                blacklist_versions=blacklist_versions)
     _add_to_and_return_result_string = _AddToAndReturnResultString()
     if current_experiment is None:
-        log_special_tokens.log_experiment_ended()
         if CONFIG.cmd_mode:
             sys.exit(3)
         else:
             return False
-
+    log_special_tokens.log_experiment_started()
     log("Experiment loaded: {0}".format(current_experiment.name))
     if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
         log_special_tokens.log_mode_test()
@@ -350,17 +348,17 @@ def _get_training_steps(mode, experiment, dataloader, clean_experiment_dir, vers
 def _get_experiment_dir(experiment_name, version_spec):
     experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
     if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
-        experiment_dir = "{0}/outputs/experiment_ckpts/temp".format(CONFIG.experiments_dir.rstrip("/"))
+        experiment_dir = os.path.join(CONFIG.experiments_outputs_dir, "experiment_ckpts/temp")
         tracking_uri = os.path.abspath(os.path.join(experiment_dir, "mlruns_tmp"))
         shutil.rmtree(experiment_dir, ignore_errors=True)
     else:
-        experiment_dir_suffix = "-" + experiment_dir_suffix \
+        experiment_dir_suffix = experiment_dir_suffix \
             if experiment_dir_suffix is not None else version_spec.name
-        output_dir = "{}/outputs".format(CONFIG.experiments_dir.rstrip("/"))
-        experiment_dir = "{}/experiment_ckpts/{}{}".format(output_dir,
-                                                           experiment_name,
-                                                           experiment_dir_suffix)
-        tracking_uri = os.path.abspath(CONFIG.mlflow_tracking_uri)
+        experiment_dir_suffix = "-" + experiment_dir_suffix
+        experiment_dir = os.path.join(CONFIG.experiments_outputs_dir,
+                                      "experiment_ckpts/{}{}".format(experiment_name,
+                                                                     experiment_dir_suffix))
+        tracking_uri = CONFIG.mlflow_tracking_uri
     return experiment_dir, tracking_uri
 
 
@@ -568,6 +566,7 @@ def _execute_exeperiment(file_path,
     Returns False if there are no more versions to execute or a version resulted in an exception
     Returns True otherwise.
     '''
+    experiments_dir = os.path.abspath(experiments_dir)
     CONFIG.experiments_dir = experiments_dir
     CONFIG.experiment_mode = experiment_mode
     CONFIG.executed_experiments = {}
@@ -579,6 +578,7 @@ def _execute_exeperiment(file_path,
     CONFIG.training_history_log_file = os.path.join(EXPERIMENTS_DIR_OUTPUTS, "t_history-{0}".format(hostName))
     CONFIG.log_file = os.path.join(EXPERIMENTS_DIR_OUTPUTS, "log-{0}".format(hostName))
     CONFIG.mlflow_tracking_uri = mlflow_tracking_uri or CONFIG.mlflow_tracking_uri
+    CONFIG.mlflow_tracking_uri = os.path.abspath(CONFIG.mlflow_tracking_uri)
     CONFIG.cmd_mode = _cmd_mode
     if no_log:
         CONFIG.no_log = True
@@ -631,9 +631,14 @@ def _execute_exeperiment(file_path,
                             CONFIG.executed_experiments[name].version.addExecutingVersion(v, t)
 
     add_script_dir_to_PATH(CONFIG.experiments_dir)
-    return _experiment_main_loop(file_path,
-                                 whitelist_versions=whitelist_versions,
-                                 blacklist_versions=blacklist_versions)
+    cwd = os.getcwd()
+    os.chdir(CONFIG.experiments_dir)
+    file_path = os.path.relpath(os.path.abspath(file_path), CONFIG.experiments_dir)
+    output = _experiment_main_loop(file_path,
+                                   whitelist_versions=whitelist_versions,
+                                   blacklist_versions=blacklist_versions)
+    os.chdir(cwd)
+    return output
 
 
 if __name__ == "__main__":

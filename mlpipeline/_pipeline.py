@@ -83,7 +83,7 @@ def _get_experiment(experiments=None, completed_experiments=[]):
     for rdir, dirs, files in os.walk(CONFIG.experiments_dir):
         for f in files:
             if f.endswith(".py"):
-                file_path = os.path.join(rdir, f)
+                file_path = f  # os.path.join(rdir, f)
                 if completed_experiments is not None and file_path in completed_experiments:
                     continue
                 # TODO: Should remove this check, prolly has no use!
@@ -133,12 +133,14 @@ def _config_update():
                 CONFIG.listed_experiments = config["WHITELISTED_EXPERIMENTS"]
             listed_experiments = []
             for experiment in CONFIG.listed_experiments:
-                listed_experiments.append(os.path.join(CONFIG.experiments_dir, experiment))
+                listed_experiments.append(experiment)
 
             for experiment in listed_experiments:
-                if not os.path.exists(experiment):
-                    listed_experiments.remove(experiment)
-                    log("Script missing: {}".format(experiment), level=logging.WARNING)
+                experiment_script_path = os.path.join(CONFIG.experiments_dir, experiment)
+                if not os.path.exists(experiment_script_path):
+                    listed_experiments.remove(experiment_script_path)
+                    log("Script missing: {}".format(experiment_script_path),
+                        level=logging.WARNING)
             CONFIG.listed_experiments = listed_experiments
             log("\033[1;036m{0}\033[0;036m: {1}\033[0m".format(
                 ["BLACKLISTED_EXPERIMENTS"
@@ -171,6 +173,7 @@ def _init_pipeline(experiment_mode, experiments_dir=None, no_log=False, experime
                                                 fallback=_default_config.EXPERIMENTS_DIR)
     else:
         CONFIG.experiments_dir = experiments_dir
+    CONFIG.experiments_dir = os.path.abspath(CONFIG.experiments_dir)
 
     if mlflow_tracking_uri is None:
         CONFIG.mlflow_tracking_uri = os.path.abspath(config.get("MLFLOW", "tracking_uri",
