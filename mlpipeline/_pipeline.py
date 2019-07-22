@@ -52,6 +52,14 @@ def _execute_subprocess(experiment_name, whitelist_versions=None, blacklist_vers
     if CONFIG.no_log:
         args.append("--no-log")
     args.append("single")
+
+    if whitelist_versions is not None:
+        args.append("--whitelist-versions")
+        args.append(','.join(whitelist_versions))
+    if blacklist_versions is not None:
+        args.append("--blacklist-versions")
+        args.append(','.join(blacklist_versions))
+
     if CONFIG.experiment_mode == ExperimentModeKeys.RUN:
         args.append("run")
     elif CONFIG.experiment_mode == ExperimentModeKeys.EXPORT:
@@ -59,14 +67,6 @@ def _execute_subprocess(experiment_name, whitelist_versions=None, blacklist_vers
     else:
         args.append("test")
 
-    if whitelist_versions is not None:
-        args.append("--whitelist-versions")
-        for version in whitelist_versions:
-            args.append(version)
-    if blacklist_versions is not None:
-        args.append("--blacklist-versions")
-        for version in blacklist_versions:
-            args.append(version)
     # if USE_HISTORY:
     #     args.append("-u")
     return subprocess.call(args, universal_newlines=True)
