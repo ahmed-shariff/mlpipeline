@@ -142,6 +142,7 @@ class Versions():
         v = EasyDict()
         v.update(kwargs)
         v.update(custom_paramters)
+        v.name = name
         v.dataloader = self._default_values.dataloader if dataloader is None else dataloader
         v.batch_size = self._default_values.batch_size if batch_size is None else batch_size
         v.epoc_count = self._default_values.epoc_count if epoc_count is None else epoc_count

@@ -103,14 +103,8 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
 
     if CONFIG.experiment_mode == ExperimentModeKeys.EXPORT:
         for version_name, version_spec in version_name_s:
-            experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
-            experiment_dir_suffix = "-" + experiment_dir_suffix \
-                if experiment_dir_suffix is not None else version_name
-            output_dir = "{}/outputs".format(CONFIG.experiments_dir.rstrip("/"))
-            experiment_dir = "{}/experiment_ckpts/{}{}".format(output_dir,
-                                                               current_experiment.name.split(".")[-2],
-                                                               experiment_dir_suffix)
-
+            experiment_dir, _ = _get_experiment_dir(current_experiment.name.split(".")[-2],
+                                                    version_spec)
             try:
                 current_experiment.setup_model(version_spec, experiment_dir)
             except NotImplementedError:
@@ -138,7 +132,6 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 modifier_2=console_colors.BOLD)
 
         version_spec = current_experiment.versions.get_version(version_name)
-        experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
         dataloader = version_spec[version_parameters.DATALOADER]
         if dataloader is not None:
             dataloader = dataloader()
@@ -147,38 +140,18 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
 
         log("Version_spec: {}".format(version_spec))
 
-        record_training = False
-        if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
-            experiment_dir = "{0}/outputs/experiment_ckpts/temp".format(CONFIG.experiments_dir.rstrip("/"))
-            tracking_uri = os.path.abspath(os.path.join(experiment_dir, "mlruns_tmp"))
-            shutil.rmtree(experiment_dir, ignore_errors=True)
-        else:
-            experiment_dir_suffix = "-" + experiment_dir_suffix \
-                if experiment_dir_suffix is not None else version_name
-            output_dir = "{}/outputs".format(CONFIG.experiments_dir.rstrip("/"))
-            experiment_dir = "{}/experiment_ckpts/{}{}".format(output_dir,
-                                                               current_experiment.name.split(".")[-2],
-                                                               experiment_dir_suffix)
-            record_training = True
-            tracking_uri = os.path.abspath(CONFIG.mlflow_tracking_uri)
-        mlflow.set_tracking_uri(tracking_uri)
-        mlflow.set_experiment(current_experiment.name)
-        # Delete runs with the same name as the current version
-        mlflow_client = mlflow.tracking.MlflowClient(tracking_uri)
-        experiment_ids = [exp.experiment_id
-                          for exp in mlflow_client.list_experiments()
-                          if current_experiment.name == exp.name]
-        current_experiment.mlflow_client = mlflow_client
-        run_id = None
-        if len(experiment_ids) > 0:
-            runs = mlflow_client.search_runs(experiment_ids,
-                                             f"tags.mlflow.runName = '{version_name}'")
-            assert len(runs) <= 1, "There cannot be more than one active run for a version"
-            if len(runs) > 0:
-                if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
-                    mlflow_client.delete_run(runs[0].info.run_uuid)
-                else:
-                    run_id = runs[0].info.run_id
+        experiment_dir, tracking_uri = _get_experiment_dir(current_experiment.name.split(".")[-2],
+                                                           version_spec)
+        record_training = True if CONFIG.experiment_mode != ExperimentModeKeys.TEST else False
+        if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
+            try:
+                current_experiment.clean_experiment_dir(experiment_dir)
+                log("Cleaned experiment dir", modifier_1=console_colors.RED_BG)
+            except NotImplementedError:
+                log("`experiment.clean_experiment_dir` not implemened."
+                    "contents in the experiment_dir will not be changed", level=logging.WARNING)
+
+        run_id = _get_mlflow_run_id(tracking_uri, current_experiment, clean_experiment_dir, version_name)
         mlflow.start_run(run_name=version_name, run_id=run_id)
         # Logging the versions params
         for k, v in version_spec.items():
@@ -190,13 +163,6 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
         eval_results = ""
 
         try:
-            if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
-                try:
-                    current_experiment.clean_experiment_dir(experiment_dir)
-                    log("Cleaned experiment dir", modifier_1=console_colors.RED_BG)
-                except NotImplementedError:
-                    log("`experiment.clean_experiment_dir` not implemened."
-                        "contents in the experiment_dir will not be changed", level=logging.WARNING)
             try:
                 current_experiment.setup_model(version_spec, experiment_dir)
             except NotImplementedError:
@@ -379,6 +345,45 @@ def _get_training_steps(mode, experiment, dataloader, clean_experiment_dir, vers
                 return complete_steps - global_step
             else:
                 return 0
+
+
+def _get_experiment_dir(experiment_name, version_spec):
+    experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
+    if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+        experiment_dir = "{0}/outputs/experiment_ckpts/temp".format(CONFIG.experiments_dir.rstrip("/"))
+        tracking_uri = os.path.abspath(os.path.join(experiment_dir, "mlruns_tmp"))
+        shutil.rmtree(experiment_dir, ignore_errors=True)
+    else:
+        experiment_dir_suffix = "-" + experiment_dir_suffix \
+            if experiment_dir_suffix is not None else version_spec.name
+        output_dir = "{}/outputs".format(CONFIG.experiments_dir.rstrip("/"))
+        experiment_dir = "{}/experiment_ckpts/{}{}".format(output_dir,
+                                                           experiment_name,
+                                                           experiment_dir_suffix)
+        tracking_uri = os.path.abspath(CONFIG.mlflow_tracking_uri)
+    return experiment_dir, tracking_uri
+
+
+def _get_mlflow_run_id(tracking_uri, current_experiment, clean_experiment_dir, version_name):
+    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_experiment(current_experiment.name)
+    # Delete runs with the same name as the current version
+    mlflow_client = mlflow.tracking.MlflowClient(tracking_uri)
+    experiment_ids = [exp.experiment_id
+                      for exp in mlflow_client.list_experiments()
+                      if current_experiment.name == exp.name]
+    current_experiment.mlflow_client = mlflow_client
+    run_id = None
+    if len(experiment_ids) > 0:
+        runs = mlflow_client.search_runs(experiment_ids,
+                                         f"tags.mlflow.runName = '{version_name}'")
+        assert len(runs) <= 1, "There cannot be more than one active run for a version"
+        if len(runs) > 0:
+            if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
+                mlflow_client.delete_run(runs[0].info.run_uuid)
+            else:
+                run_id = runs[0].info.run_id
+    return run_id
 
 
 def _get_experiment(file_path,
