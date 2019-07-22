@@ -1,7 +1,12 @@
+import os
 from mlpipeline._pipeline import (_mlpipeline_main_loop, _init_pipeline)
-from mlpipeline._pipeline_subprocess import _execute_exeperiment
+from mlpipeline._pipeline_subprocess import (_execute_exeperiment,
+                                             _get_experiment,
+                                             _get_experiment_dir,
+                                             _get_mlflow_run_id)
 from mlpipeline.utils import (ExperimentWrapper,
-                              ExperimentModeKeys)
+                              ExperimentModeKeys,
+                              _load_file_as_module)
 
 
 def mlpipeline_execute_pipeline(experiments,
@@ -38,3 +43,27 @@ def mlpipeline_execute_exeperiment(file_path,
                                experiments_output_dir=experiments_output_dir):
         if experiment_mode == ExperimentModeKeys.TEST:
             break
+
+
+# TODO: Need to track the root of the project, or this becomes kind of ridiculous.
+def get_experiment(file_path, experiment_dir, version_name, mlflow_tracking_uri=None):
+    cwd = os.getcwd()
+    experiment_dir = os.path.abspath(experiment_dir)
+    file_path = os.path.relpath(os.path.abspath(file_path), experiment_dir)
+    print(f"Setting root directory to: {experiment_dir}")
+    print(f"Loading experiment: {file_path}")
+    os.chdir(experiment_dir)
+    experiment = _load_file_as_module(file_path).EXPERIMENT
+    experiment.name = os.path.relpath(file_path, experiment_dir)
+    version_spec = experiment.versions.get_version(version_name)
+    experiment_dir, _ = _get_experiment_dir(experiment.name.split(".")[-2],
+                                            version_spec,
+                                            None)
+    # if mlflow_tracking_uri is None:
+    #     run_id = None
+    # else:
+    #     run_id = _get_mlflow_run_id(mlflow_tracking_uri, experiment, False, version_name)
+    experiment._current_version = version_spec
+    experiment._experiment_dir = None
+    os.chdir(cwd)
+    return experiment  # , experiment_dir, run_id

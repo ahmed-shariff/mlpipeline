@@ -102,7 +102,11 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
     if CONFIG.experiment_mode == ExperimentModeKeys.EXPORT:
         for version_name, version_spec in version_name_s:
             experiment_dir, _ = _get_experiment_dir(current_experiment.name.split(".")[-2],
-                                                    version_spec)
+                                                    version_spec,
+                                                    CONFIG.experiment_mode)
+            current_experiment._current_version = version_spec
+            current_experiment._experiment_dir = experiment_dir
+
             try:
                 current_experiment.setup_model(version_spec, experiment_dir)
             except NotImplementedError:
@@ -139,7 +143,8 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
         log("Version_spec: {}".format(version_spec))
 
         experiment_dir, tracking_uri = _get_experiment_dir(current_experiment.name.split(".")[-2],
-                                                           version_spec)
+                                                           version_spec,
+                                                           CONFIG.experiment_mode)
         record_training = True if CONFIG.experiment_mode != ExperimentModeKeys.TEST else False
         if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
             try:
@@ -345,9 +350,9 @@ def _get_training_steps(mode, experiment, dataloader, clean_experiment_dir, vers
                 return 0
 
 
-def _get_experiment_dir(experiment_name, version_spec):
+def _get_experiment_dir(experiment_name, version_spec, mode):
     experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
-    if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+    if mode == ExperimentModeKeys.TEST:
         experiment_dir = os.path.join(CONFIG.experiments_outputs_dir, "experiment_ckpts/temp")
         tracking_uri = os.path.abspath(os.path.join(experiment_dir, "mlruns_tmp"))
         shutil.rmtree(experiment_dir, ignore_errors=True)
@@ -399,12 +404,11 @@ def _get_experiment(file_path,
         log("{0} is not a experiment script. "
             "It does not contain a `EXPERIMENT` global variable".format(file_path))
         return None, None, False
-    experiment._collect_related_files(CONFIG.experiments_dir, [os.path.abspath(module.__file__)])
-    # TODO: why did i add this in the first place??
-    # if just_return_experiment:
-    # 	  print("\033[1;33mJust returning module\033[1;0m")
-    # 	  return module
 
+    if just_return_experiment:
+        return experiment, None, None
+
+    experiment._collect_related_files(CONFIG.experiments_dir, [os.path.abspath(module.__file__)])
     # Figure our which version should be executed next
     returning_version = None
     try:
