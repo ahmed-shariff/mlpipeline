@@ -7,6 +7,7 @@ from mlpipeline._pipeline import (_init_pipeline,
                                   _mlpipeline_main_loop)
 from mlpipeline._pipeline_subprocess import _execute_exeperiment
 
+
 def get_run():
     @click.pass_obj
     def run(config):
@@ -84,26 +85,26 @@ def process_pipeline(ctx, config, no_log, experiments, experiments_dir, mlflow_t
               help='A list of version to be executed from the experiment.')
 @click.option('--blacklist-versions', multiple=True,
               help='A list of version to be excluded from the experiment.')
+@click.option('-b', is_flag=True, hidden=True)
 @click.pass_context
-def single(ctx, whitelist_versions, blacklist_versions):
+def single(ctx, whitelist_versions, blacklist_versions, b):
     '''
     Same as mlpipeline, but this mode takes only a single experiment as an input and
     allows to filter the versions being executed in the experiments.
     Note only one of whitelist_versions and blacklist_versions can be set.
     '''
-    config = ctx.obj
-    if len(config.listed_experiments) != 1:
-        click.echo("Error: Only one experiment should be passed with single mode", err=True)
-        ctx.exit()
-    if config.experiments_dir is None:
-        click.echo("Error: `single` mode requires the `experiments_dir` option to be passed")
-        ctx.exit()
-    ctx.obj = config
+    pass
 
 
 @single.resultcallback()
-def process_pipeline(config, whitelist_versions, blacklist_versions, **kwargs):
-    print(config.listed_experiments[0])
+def process_pipeline_single(config, whitelist_versions, blacklist_versions, b, **kwargs):
+    if len(config.listed_experiments) != 1:
+        click.echo("Error: Only one experiment should be passed with single mode", err=True)
+        return
+    if config.experiments_dir is None:
+        click.echo("Error: `single` mode requires the `experiments_dir` option to be passed")
+        return
+
     while _execute_exeperiment(config.listed_experiments[0],
                                config.experiments_dir,
                                config.experiment_mode,
@@ -113,7 +114,7 @@ def process_pipeline(config, whitelist_versions, blacklist_versions, **kwargs):
                                mlflow_tracking_uri=config.mlflow_tracking_uri,
                                _cmd_mode=True):
         # experiments_output_dir=experiments_output_dir):
-        if config.experiment_mode == ExperimentModeKeys.TEST:
+        if b or config.experiment_mode == ExperimentModeKeys.TEST:
             break
 
 

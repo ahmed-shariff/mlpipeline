@@ -52,6 +52,7 @@ def _execute_subprocess(experiment_name, whitelist_versions=None, blacklist_vers
     if CONFIG.no_log:
         args.append("--no-log")
     args.append("single")
+    args.append("-b")
 
     if whitelist_versions is not None:
         args.append("--whitelist-versions")
