@@ -3,6 +3,7 @@ from mlpipeline.utils import ExecutionModeKeys
 from mlpipeline.utils import log
 from mlpipeline.utils import copy_related_files
 from mlpipeline.utils import _collect_related_files
+import logging
 
 
 class ExperimentABC():
@@ -24,7 +25,7 @@ class ExperimentABC():
                                        passed to the `pre_execution_hook` will be cleared, essentially removing any
                                        saved information of the experiment. This can be used when the experiment
                                        training needs to be reset.
-        reset_steps -- if true, the number of steps that has elapsed will be ignored and number of steps will be
+        reset_steps -- (DEPRECATING) if true, the number of steps that has elapsed will be ignored and number of steps will be
                        calculated as if no training as occurred. if false, the steps will be calucated by deducting
                        the value returned by `get_trained_step_count`.
         '''
@@ -34,33 +35,73 @@ class ExperimentABC():
             raise ValueError("versions should be an instance of `Versions` class, but recived: {0}".format(type(versions)))
         self.allow_delete_experiment_dir = allow_delete_experiment_dir
         self.reset_steps = reset_steps
+        self._current_version = None
+        self._experiment_dir = None
+        self._dataloader = None
+
+    def _set_dataloader(self, value):
+        self.log("`dataloader` is being set, which is not recommended.", level=logging.WARN)
+        self._dataloader = value
+
+    def _set_experiment_dir(self, value):
+        self.log("`experiment_dir` is being set, which is not recommended.", level=logging.WARN)
+        self._experiment_dir = value
+
+    def _set_current_version(self, value):
+        self.log("`current_version` is being set, which is not recommended.", level=logging.WARN)
+        self._current_version = value
+
+    def _get_dataloader(self):
+        return self._dataloader
+
+    def _get_experiment_dir(self):
+        return self._experiment_dir
+
+    def _get_current_version(self):
+        return self._current_version
+
+    current_version = property(
+        fget=_get_current_version,
+        fset=_set_current_version,
+        doc="The current version being executed. Will set by the pipeline")
+    experiment_dir = property(
+        fget=_get_experiment_dir,
+        fset=_set_experiment_dir,
+        doc="The experiment directory for the current run. Will be set by the mlpipeline")
+    dataloader = property(
+        fget=_get_dataloader,
+        fset=_set_dataloader,
+        doc="The dataloader set for a given execution of a experiment. Will be set by the mlpipeline")
 
     # TODO: Does the exec_mode have to be here?
-    def pre_execution_hook(self, version, experiment_dir, exec_mode=ExecutionModeKeys.TEST):
+    def pre_execution_hook(self, mode=ExecutionModeKeys.TEST):
         '''
         Before execution, this method will be called to set the version obtained from `self.versions`. Also `experiment_dir` will provide the destination to save the experiment in as specified in the config file. The exec_mode will be passed, with on of the keys as specified in `ExecutionModeKeys`. This function can be used to define the experiment's hyperparameters based on the information of the version being executed duering an iteration. This method will be once called before `train_loop` for each version. 
         '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
-    def setup_model(self, version, experiment_dir):
+    def post_execution_hook(self, mode=ExecutionModeKeys.TEST):
+        raise NotImplementedError()
+
+    def setup_model(self):
         '''
         This function will be called before the 'export_model' and 'pre_execution_hook'. It expects to set the 'self.model' of the Experiment class here. This will be callaed before the train_loop function and the 'export_model' methods. The current version spec will passed to this method.
 '''
         raise NotImplementedError()
 
-    def train_loop(self, input_fn, steps, version):
+    def train_loop(self, input_fn, steps):
         '''
 This will be called when the experiment is entering the traning phase. Ideally, what needs to happen in this function is to use the `input_fn` and execute the training loop for a given number of steps which will be passed through `steps`. The input_fn passed here will be the object returned by the `get_train_input` method of the dataloader. In addition, other functionalities can be included here as well, such as saving the experiment parameters during training, etc. Th return value of the method will be logged. The current version spec will passed to this method.
 '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
-    def evaluate_loop(self, input_fn, steps, version):
+    def evaluate_loop(self, input_fn, steps):
         '''
 This will be called when the experiment is entering the testing phase following the training phase. Ideally, what needs to happen in this function is to use the input_fn to obtain the inputs and execute the evaluation loop for a given number of steps. The input function passed here will be the object returned by the `get_train_input` and `get_test_input` methods of the dataloader. In addition to that other functionalities can be included here as well, such as saving the experiment parameters, producing additional statistics etc. the return value of the method will be logged. The current version spec will passed to this method.
 '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
-    def export_model(self, version):
+    def export_model(self):
         '''
         This method is called when a model is called with the export settings. Either by setting the respecitve command line argument or passing the export parameter in the versions.
 '''
@@ -70,13 +111,13 @@ This will be called when the experiment is entering the testing phase following 
         '''
 This function must return either `None` or a positive integer. The is used to determine how many steps have been completed and assess the number of steps the training should take. This is delegated to the `Experiment` as the process of determining the number is library specific.
 '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def clean_experiment_dir(self, experiment_dir):
         '''
 This function will be called when a experiment needs to be reset and the directory `experiment_dir` needs to be cleared as well.
 '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def add_to_summery(self, content):
         '''
@@ -115,31 +156,31 @@ class DataLoaderABC():
         '''
         This function returns an object which will be passed to the `Experiment.train_loop` when executing the training function of the experiment, the same function will be used for evaluation following training using `Experiment.evaluate_loop` . The the object returned by this function would depend on the how the return function will be used in the experiment. (eg: for Tensorflow models the returnn value can be a function object, for pyTorch it can be a Dataset object. In both cases the output of this function will be providing the data used for training)
 '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_test_input(self, **kargs):
         '''
     This function returns an object which will be used to execute the evaluataion following training using `Experiment.evaluate_loop`. The the object returned by this function would depend on the how the return function will be used in the experiment. (eg: for Tensorflow models the returnn value can be a function object, for pyTorch it can be a Dataset object.  In both cases the output of this function will be providing the data used for evaluation)
 '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_dataloader_summery(self, **kargs):
         '''
 This function will be called to log a summery of the dataloader when logging the results of a experiment
     '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_train_sample_count(self):
         '''
 returns the number of datapoints being used as the training dataset. This will be used to assess the number of epocs during training and evaluating.
 '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_test_sample_count(self):
         '''
 returns the number of datapoints being used as the testing dataset. This will be used to assess the number of epocs during training and evaluating.
 '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def add_to_summery(self, content):
         '''

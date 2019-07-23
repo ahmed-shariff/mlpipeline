@@ -108,11 +108,11 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
             current_experiment._experiment_dir = experiment_dir
 
             try:
-                current_experiment.setup_model(version_spec, experiment_dir)
+                current_experiment.setup_model()
             except NotImplementedError:
                 log("`setup_model` not implemented. Ignoring.")
             log("Exporting model for version: {}".format(version_name))
-            current_experiment.export_model(version_spec)
+            current_experiment.export_model()
             log("Exported model {}".format(version_name))
         log_special_tokens.log_experiment_ended()
         if CONFIG.cmd_mode:
@@ -155,6 +155,11 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                     "contents in the experiment_dir will not be changed", level=logging.WARNING)
 
         run_id = _get_mlflow_run_id(tracking_uri, current_experiment, clean_experiment_dir, version_name)
+
+        current_experiment._current_version = version_spec
+        current_experiment._experiment_dir = experiment_dir
+        current_experiment._dataloader = dataloader
+        
         mlflow.start_run(run_name=version_name, run_id=run_id)
         # Logging the versions params
         for k, v in version_spec.items():
@@ -167,11 +172,11 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
 
         try:
             try:
-                current_experiment.setup_model(version_spec, experiment_dir)
+                current_experiment.setup_model()
             except NotImplementedError:
                 log("`setup_model` not implemented. Ignoring.")
             try:
-                current_experiment.pre_execution_hook(version_spec, experiment_dir)
+                current_experiment.pre_execution_hook(mode=CONFIG.experiment_mode)
             except NotImplementedError:
                 log("`pre_execution_hook` not implemented. Ignoring.")
             os.makedirs(experiment_dir, exist_ok=True)
@@ -205,8 +210,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 try:
                     train_output = current_experiment.train_loop(
                         input_fn=input_fn,
-                        steps=classification_steps,
-                        version=version_spec)
+                        steps=classification_steps)
                 except Exception as e:
                     train_results = "Training loop failed: {0}".format(str(e))
                     log(train_results, logging.ERROR)
@@ -230,8 +234,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                     .format(train_eval_steps if train_eval_steps is not None else 'unspecified'))
                 train_results = current_experiment.evaluate_loop(
                     input_fn=input_fn,
-                    steps=train_eval_steps,
-                    version=version_spec)
+                    steps=train_eval_steps)
                 log("Eval on train set: ")
                 if isinstance(train_results, MetricContainer):
                     train_results = train_results.log_metrics(complete_epoc=True, name_prefix="TRAIN_")
@@ -258,8 +261,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 log("Testing evaluation started: {0} steps".
                     format(test__eval_steps if test__eval_steps is not None else 'unspecified'))
                 eval_results = current_experiment.evaluate_loop(input_fn=input_fn,
-                                                                steps=test__eval_steps,
-                                                                version=version_spec)
+                                                                steps=test__eval_steps)
                 log("Eval on train set:")
                 if isinstance(eval_results, MetricContainer):
                     eval_results = eval_results.log_metrics(complete_epoc=True, name_prefix="TEST_")
@@ -276,6 +278,10 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 log(traceback.format_exc(), logging.ERROR)
                 if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
                     raise
+            try:
+                current_experiment.post_execution_hook(mode=CONFIG.experiment_mode)
+            except NotImplementedError:
+                log("`post_execution_hook` not implemented. Ignoring.")
 
             log("Experiment evaluation complete")
             _add_to_and_return_result_string("Eval on train set: {0}".format(train_results))
