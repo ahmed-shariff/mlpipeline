@@ -40,14 +40,9 @@ def train_pipeline_with_blacklist():
 
 
 def load_experiment():
-    exp, exp_dir, tracking_uri, run_id = get_experiment("experiments/sample_experiment.py",
-                                                        "experiments",
-                                                        "version5")
-    import os
-    import mlflow
-    mlflow.start_run(run_id=run_id)
-    print(os.listdir(exp_dir), run_id, mlflow.get_artifact_uri(), mlflow.get_tracking_uri())
-    print(mlflow.get_artifact_uri('sample_experiment.py'))
+    print(get_experiment("experiments/sample_experiment.py",
+                         "experiments",
+                         "version5"))
 
 
 if __name__ == "__main__":
