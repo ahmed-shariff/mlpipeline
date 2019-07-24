@@ -1,4 +1,12 @@
 * Change-log
+** 2.0.a.4 [2019-07-24 Wed] 
+   - Added function to load previously executed experiment.
+   - The experiments are executed with the cwd set to the `experiments_dir`.
+   - Added base implementation for pytroch.
+   - Added a post_execution_hook, which operates the same as the pre_execution_hook and run after all train and evaluate loops are over.
+   - Added current_version, experiment_dir and dataloader to be experiments properties
+   - Bug fixes:
+     - Moved each version of an experiment to be executed in a separate sub-process
 ** 2.0.a.3 [2019-07-16]
    - Several methods from the base classes are not required to be implemented. They are:
      - Experiment.setup_model
