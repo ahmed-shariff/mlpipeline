@@ -4,9 +4,9 @@ from mlpipeline.base import ExperimentABC
 from mlpipeline.utils import ExecutionModeKeys
 
 
-class BaseTorchExperiment(ExperimentABC):
-    def __init__(self, versions, **args):
-        super().__init__(versions, **args)
+class BaseTorchExperimentABC(ExperimentABC):
+    def __init__(self, versions, allow_delete_experiment_dir=False, **args):
+        super().__init__(versions, allow_delete_experiment_dir, **args)
         self.model = None
         self.topk_k = None
         self.logging_iteration = None
@@ -16,13 +16,13 @@ class BaseTorchExperiment(ExperimentABC):
         self.use_cuda = None
         self.save_history_checkpoints_count = None
 
-    def setup_model(self, version, experiment_dir):
-        self.history_file_name = "{}/model_params{}.tch".format(experiment_dir.rstrip("/"), "{}")
+    def setup_model(self):
+        self.history_file_name = "{}/model_params{}.tch".format(self.experiment_dir.rstrip("/"), "{}")
         self.file_name = self.history_file_name.format(0)
 
-    def pre_execution_hook(self, version, experiment_dir, exec_mode=ExecutionModeKeys.TEST):
-        print("Version spec: ", version)
-        self.current_version = version
+    def pre_execution_hook(self, mode=ExecutionModeKeys.TEST):
+        print("Version spec: ", self.current_version)
+        self.current_version = self.current_version
         self.logging_iteration = 10
         self.save_history_checkpoints_count = 10
         if os.path.isfile(self.file_name):
@@ -31,9 +31,6 @@ class BaseTorchExperiment(ExperimentABC):
         else:
             self.epocs_params = 0
             self.log("No checkpoint")
-
-    def get_current_version(self):
-        return self.current_version
 
     def get_trained_step_count(self):
         ret_val = (self.epocs_params
@@ -59,12 +56,12 @@ class BaseTorchExperiment(ExperimentABC):
         torch.save({
             'epoch': epoch,
             'state_dict': self.model.state_dict(),
-            'optimizer' : None if self.optimizer is None else self.optimizer.state_dict(),
+            'optimizer': None if self.optimizer is None else self.optimizer.state_dict(),
             'validation': self.dataloader.datasets.validation_dataset,
             'lr_scheduler': None if self.lr_scheduler is None else self.lr_scheduler.state_dict()
         }, self.file_name)
         self.log("Saved checkpoint for epoc: {} at {}".format(epoch + 1, self.file_name))
-                    
+
     def load_history_checkpoint(self, checkpoint_file_name, load_optimizer=True, export_mode=False):
         self.log("Loading: {}".format(checkpoint_file_name), log_to_file=True)
         checkpoint = torch.load(checkpoint_file_name)

@@ -1,7 +1,8 @@
 import torch
 import json
 from mlpipeline.base import DataLoaderABC
-from mlpipeline.utils import ExecutionModeKeys
+from mlpipeline.utils import (ExecutionModeKeys,
+                              log)
 
 
 class Datasets():
@@ -60,7 +61,7 @@ class Datasets():
                                                      test_data_load_function)
             else:
                 if test_size is None:
-                    log("Datasetes: Using default 'test_size': 0.1")
+                    log("Using default 'test_size': 0.1", agent="Datasets")
                     test_size = 0.1
                 assert 0 <= test_size <= 1
                 train_size = round(len(self._train_dataset) * test_size)
@@ -68,7 +69,7 @@ class Datasets():
                 self._train_dataset = self._train_dataset[train_size:]
         else:
             if test_size is not None:
-                log("Datasetes: Ignoring 'test_size'")
+                log("Ignoring 'test_size'", agent="Datasets")
             if test_data_load_function is None:
                 self._test_dataset = self._load_data(test_dataset_file_path,
                                                      train_data_load_function)
@@ -78,7 +79,7 @@ class Datasets():
 
         if validation_dataset_file_path is None:
             if validation_size is None:
-                log("Datasetes: Using default 'validation_size': 0.1")
+                log("Using default 'validation_size': 0.1", agent="Datasets")
                 validation_size = 0.1
             assert 0 <= validation_size <= 1
             train_size = round(len(self._train_dataset) * validation_size)
@@ -86,16 +87,16 @@ class Datasets():
             self._train_dataset = self._train_dataset[train_size:]
         else:
             if validation_size is not None:
-                log("Datasetes: Ignoring 'validation_size'")
+                log("Ignoring 'validation_size'", agent="Datasets")
             self._validation_dataset = self._load_data(validation_dataset_file_path,
                                                        train_data_load_function)
 
         if class_encoding is not None:
             assert isinstance(class_encoding, dict)
         self.class_encoding = class_encoding
-        log("Datasets- Train dataset size: {}".format(len(self._train_dataset)))
-        log("Datasets- Test dataset size: {}".format(len(self._test_dataset)))
-        log("Datasets- Validation dataset size: {}".format(len(self._validation_dataset)))
+        log("Train dataset size: {}".format(len(self._train_dataset)), agent="Datasets")
+        log("Test dataset size: {}".format(len(self._test_dataset)), agent="Datasets")
+        log("Validation dataset size: {}".format(len(self._validation_dataset)), agent="Datasets")
 
     def _load_data(self,
                    data_file_path,
@@ -152,8 +153,8 @@ class BaseTorchDataLoader(DataLoaderABC):
                  train_transforms=[],
                  test_transforms=[]):
         super().__init__()
-        assert isinstance(datasets, Datasets)
-        assert isinstance(pytorch_dataset_factory, DatasetFactory)
+        # assert isinstance(datasets, Datasets)
+        # assert isinstance(pytorch_dataset_factory, DatasetFactory)
         self.datasets = datasets
         self.pytorch_dataset_factory = pytorch_dataset_factory
         self.batch_size = batch_size
@@ -207,9 +208,8 @@ class BaseTorchDataLoader(DataLoaderABC):
                                          collate_fn=dataset_class.collate_fn)
         return dl
 
-    # TODO: Temp placeholder function until the behaviour is replaced.
-    def set_validation_set(self, dataset):
-        pass
+    def get_validation_input(self, **kwargs):
+        return self.get_test_input(self.datasets.validation_dataset)
 
 
 class DatasetFactory():
@@ -221,29 +221,20 @@ class DatasetFactory():
         self.dataset_class = dataset_class
         self.args = args
 
-    def create_instance(self, current_data, mode, transform_fn):
+    def create_instance(self, current_data, mode, transform):
         obj = self.dataset_class(**self.args)
-        obj._inject_params(current_data, mode, transform_fn)
+        obj._inject_params(current_data, mode, transform)
         obj.collate_fn = getattr(obj, 'collate_fn', torch.utils.data.dataloader.default_collate)
         return obj
 
 
-class DatasetBasic(torch.utils.data.Dataset):
+class DatasetBasicABC(torch.utils.data.Dataset):
     """The Base dataset class."""
 
     def __init__(self, *args, **kwargs):
         self._current_data = None
         self._transform = None
         self._mode = None
-        self.current_data = property(fget=self._get_current_data,
-                                     fset=self._set_current_data,
-                                     doc="The data currently being used by the dataset")
-        self.transform = property(fget=self._get_transform,
-                                  fset=self._set_transform,
-                                  doc="The transforms to be applied")
-        self.mode = property(fget=self._get_mode,
-                             fset=self._set_mode,
-                             doc="The current mode of the experiment (ExecutionModeKeys)")
 
     def _set_mode(self, value):
         self._mode = value
@@ -263,13 +254,23 @@ class DatasetBasic(torch.utils.data.Dataset):
     def _get_current_data(self):
         return self._current_data
 
+    current_data = property(fget=_get_current_data,
+                            fset=_set_current_data,
+                            doc="The data currently being used by the dataset")
+    transform = property(fget=_get_transform,
+                         fset=_set_transform,
+                         doc="The transforms to be applied")
+    mode = property(fget=_get_mode,
+                    fset=_set_mode,
+                    doc="The current mode of the experiment (ExecutionModeKeys)")
+
     def _inject_params(self, current_data, mode, transform=None):
         self._set_current_data(current_data)
         self._set_transform(transform)
         self._set_mode(mode)
 
-    def pre_process(self):
-        raise NotImplementedError()
+    # def pre_process(self):
+    #     raise NotImplementedError()
 
     def __len__(self):
         if self.current_data is None:
