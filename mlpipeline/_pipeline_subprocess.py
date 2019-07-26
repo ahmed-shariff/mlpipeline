@@ -571,7 +571,8 @@ def _execute_exeperiment(file_path,
                          blacklist_versions=None,
                          experiments_output_dir=None,
                          mlflow_tracking_uri=None,
-                         _cmd_mode=False):
+                         _cmd_mode=False,
+                         multiprocessing_version_quque=None):
     '''
     Returns False if there are no more versions to execute or a version resulted in an exception
     Returns True otherwise.
@@ -644,9 +645,13 @@ def _execute_exeperiment(file_path,
     cwd = os.getcwd()
     os.chdir(CONFIG.experiments_dir)
     file_path = os.path.relpath(os.path.abspath(file_path), CONFIG.experiments_dir)
-    output = _experiment_main_loop(file_path,
-                                   whitelist_versions=whitelist_versions,
-                                   blacklist_versions=blacklist_versions)
+    if multiprocessing_version_quque is not None:
+        output = _get_experiment(file_path, whitelist_versions, blacklist_versions, True)
+        multiprocessing_version_quque.put(output[0].versions.get_version_names())
+    else:
+        output = _experiment_main_loop(file_path,
+                                       whitelist_versions=whitelist_versions,
+                                       blacklist_versions=blacklist_versions)
     os.chdir(cwd)
     return output
 

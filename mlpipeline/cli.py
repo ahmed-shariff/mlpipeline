@@ -1,6 +1,6 @@
 import click
 import sys
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 
 from mlpipeline.utils import (_PipelineConfig,
                               log_special_tokens,
@@ -27,10 +27,16 @@ def get_export():
     return export
 
 
-def get_test():
+def get_test(all_option_enable=False, all_option_help=''):
+    if all_option_enable:
+        all_option = click.option('--all', is_flag=True, help=all_option_help)
+    else:
+        all_option = click.option('--all', is_flag=True, help=all_option_help, hidden=True)
+    @all_option
     @click.pass_obj
-    def test(config):
+    def test(config, all):
         config.experiment_mode = ExperimentModeKeys.TEST
+        config.all_option = all
         return config
     return test
 
@@ -108,8 +114,41 @@ def process_pipeline_single(config, whitelist_versions, blacklist_versions, b, *
         click.echo("Error: `single` mode requires the `experiments_dir` option to be passed")
         return
 
+    try:
+        all_option = config.all_option
+        if all_option:
+            quque = Queue()
+            p = Process(target=_execute_exeperiment,
+                        kwargs={
+                            'file_path': config.listed_experiments[0],
+                            'experiments_dir': config.experiments_dir,
+                            'experiment_mode': config.experiment_mode,
+                            'no_log': config.no_log,
+                            'whitelist_versions': whitelist_versions,
+                            'blacklist_versions': blacklist_versions,
+                            'mlflow_tracking_uri': config.mlflow_tracking_uri,
+                            '_cmd_mode': True,
+                            'multiprocessing_version_quque': quque
+                        })
+            p.start()
+            p.join()
+            whitelist_versions = quque.get()
+            whitelist_versions_all = set(whitelist_versions)
+            executed_versions = []
+        else:
+            executed_versions = None
+    except AttributeError:
+        executed_versions = None
     exitcode = 0
     while exitcode != 3 and exitcode != 1:
+        if executed_versions is not None:
+            try:
+                whitelist_versions = whitelist_versions_all.difference(executed_versions).pop()
+            except KeyError:
+                break
+            blacklist_versions = None
+            executed_versions.append(whitelist_versions)
+            whitelist_versions = [whitelist_versions]
         p = Process(target=_execute_exeperiment,
                     kwargs={
                         'file_path': config.listed_experiments[0],
@@ -134,7 +173,9 @@ def process_pipeline_single(config, whitelist_versions, blacklist_versions, b, *
         #                      _cmd_mode=True):
         # experiments_output_dir=experiments_output_dir):
         if b or config.experiment_mode == ExperimentModeKeys.TEST:
-            break
+            if executed_versions is None:
+                break
+    sys.exit(exitcode)
 
 
 single.command(short_help='Execute the experiments')(get_run())
