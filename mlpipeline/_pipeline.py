@@ -1,11 +1,11 @@
 import os
 import sys
-import subprocess
+# import subprocess
 import configparser
 import socket
 import argparse
 import logging
-
+from multiprocessing import Process
 from mlpipeline.utils import (log,
                               log_special_tokens,
                               set_logger,
@@ -13,6 +13,7 @@ from mlpipeline.utils import (log,
                               ExperimentModeKeys,
                               ExperimentWrapper,
                               _PipelineConfig)
+from mlpipeline._pipeline_subprocess import _execute_exeperiment
 import mlpipeline._default_configurations as _default_config
 # why not check for this
 if sys.version_info < (3, 5):
@@ -45,32 +46,20 @@ def _mlpipeline_main_loop(experiments=None):
 
 
 def _execute_subprocess(experiment_name, whitelist_versions=None, blacklist_versions=None):
-    args = ["mlpipeline",
-            "--experiments", experiment_name,
-            "--experiments-dir", CONFIG.experiments_dir,
-            "--mlflow_tracking_uri", CONFIG.mlflow_tracking_uri]
-    if CONFIG.no_log:
-        args.append("--no-log")
-    args.append("single")
-    args.append("-b")
-
-    if whitelist_versions is not None:
-        args.append("--whitelist-versions")
-        args.append(','.join(whitelist_versions))
-    if blacklist_versions is not None:
-        args.append("--blacklist-versions")
-        args.append(','.join(blacklist_versions))
-
-    if CONFIG.experiment_mode == ExperimentModeKeys.RUN:
-        args.append("run")
-    elif CONFIG.experiment_mode == ExperimentModeKeys.EXPORT:
-        args.append("export")
-    else:
-        args.append("test")
-
-    # if USE_HISTORY:
-    #     args.append("-u")
-    return subprocess.call(args, universal_newlines=True)
+    p = Process(target=_execute_exeperiment,
+                kwargs={
+                    'file_path': experiment_name,
+                    'experiments_dir': CONFIG.experiments_dir,
+                    'experiment_mode': CONFIG.experiment_mode,
+                    'no_log': CONFIG.no_log,
+                    'whitelist_versions': whitelist_versions,
+                    'blacklist_versions': blacklist_versions,
+                    'mlflow_tracking_uri': CONFIG.mlflow_tracking_uri,
+                    '_cmd_mode': CONFIG.cmd_mode
+                })
+    p.start()
+    p.join()
+    return p.exitcode
 
 
 def _get_experiment(experiments=None, completed_experiments=[]):
