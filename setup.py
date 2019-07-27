@@ -20,7 +20,7 @@ setuptools.setup(
         'console_scripts': [
             'mlpipeline_old=mlpipeline._pipeline:main',
             '_mlpipeline_subprocess_old=mlpipeline._pipeline_subprocess:main',
-            'mlpipeline=mlpipeline.cli:cli'
+            'mlpipeline=mlpipeline._cli:cli'
             ]
         },
     classifiers=[
