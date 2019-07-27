@@ -89,13 +89,13 @@ class ExperimentABC():
 '''
         raise NotImplementedError()
 
-    def train_loop(self, input_fn, steps):
+    def train_loop(self, input_fn):
         '''
 This will be called when the experiment is entering the traning phase. Ideally, what needs to happen in this function is to use the `input_fn` and execute the training loop for a given number of steps which will be passed through `steps`. The input_fn passed here will be the object returned by the `get_train_input` method of the dataloader. In addition, other functionalities can be included here as well, such as saving the experiment parameters during training, etc. Th return value of the method will be logged. The current version spec will passed to this method.
 '''
         raise NotImplementedError()
 
-    def evaluate_loop(self, input_fn, steps):
+    def evaluate_loop(self, input_fn):
         '''
 This will be called when the experiment is entering the testing phase following the training phase. Ideally, what needs to happen in this function is to use the input_fn to obtain the inputs and execute the evaluation loop for a given number of steps. The input function passed here will be the object returned by the `get_train_input` and `get_test_input` methods of the dataloader. In addition to that other functionalities can be included here as well, such as saving the experiment parameters, producing additional statistics etc. the return value of the method will be logged. The current version spec will passed to this method.
 '''

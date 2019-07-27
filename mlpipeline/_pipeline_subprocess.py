@@ -194,36 +194,26 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 train_eval_steps = 1 if train_eval_steps is not None else None
 
             _save_training_time(current_experiment, version_name)
-            classification_steps = _get_training_steps(ExecutionModeKeys.TRAIN,
-                                                       current_experiment,
-                                                       dataloader,
-                                                       clean_experiment_dir,
-                                                       version_spec)
-            log("Steps: {0}".format(classification_steps
-                                    if classification_steps is not None else 'unspecified'))
 
             try:
                 input_fn = dataloader.get_train_input(mode=ExecutionModeKeys.TRAIN)
             except NotImplementedError:
                 log('`get_train_input` not implemented for training. Ignoring')
-            if classification_steps is not None and classification_steps > 0:
-                try:
-                    train_output = current_experiment.train_loop(
-                        input_fn=input_fn,
-                        steps=classification_steps)
-                except Exception as e:
-                    train_results = "Training loop failed: {0}".format(str(e))
-                    log(train_results, logging.ERROR)
-                    log(traceback.format_exc(), logging.ERROR)
-                    if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
-                        raise
-                if isinstance(train_output, MetricContainer):
-                    train_output = train_output.log_metrics(log_to_file=False, complete_epoc=True)
-                if isinstance(train_output, str):
-                    log("Experiment traning loop output: {0}".format(train_output))
-                log(log_special_tokens.TRAINING_COMPLETE)
-            else:
-                log("No training. Loaded previous experiment environment")
+
+            try:
+                train_output = current_experiment.train_loop(
+                    input_fn=input_fn)
+            except Exception as e:
+                train_results = "Training loop failed: {0}".format(str(e))
+                log(train_results, logging.ERROR)
+                log(traceback.format_exc(), logging.ERROR)
+                if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+                    raise
+            if isinstance(train_output, MetricContainer):
+                train_output = train_output.log_metrics(log_to_file=False, complete_epoc=True)
+            if isinstance(train_output, str):
+                log("Experiment traning loop output: {0}".format(train_output))
+            log(log_special_tokens.TRAINING_COMPLETE)
 
             try:
                 input_fn = dataloader.get_train_input(mode=ExecutionModeKeys.TEST)
@@ -233,8 +223,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 log("Training evaluation started: {0} steps"
                     .format(train_eval_steps if train_eval_steps is not None else 'unspecified'))
                 train_results = current_experiment.evaluate_loop(
-                    input_fn=input_fn,
-                    steps=train_eval_steps)
+                    input_fn=input_fn)
                 log("Eval on train set: ")
                 if isinstance(train_results, MetricContainer):
                     train_results = train_results.log_metrics(complete_epoc=True, name_prefix="TRAIN_")
@@ -260,8 +249,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
             try:
                 log("Testing evaluation started: {0} steps".
                     format(test__eval_steps if test__eval_steps is not None else 'unspecified'))
-                eval_results = current_experiment.evaluate_loop(input_fn=input_fn,
-                                                                steps=test__eval_steps)
+                eval_results = current_experiment.evaluate_loop(input_fn=input_fn)
                 log("Eval on train set:")
                 if isinstance(eval_results, MetricContainer):
                     eval_results = eval_results.log_metrics(complete_epoc=True, name_prefix="TEST_")
@@ -314,46 +302,6 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
         mlflow.end_run()
     log_special_tokens.log_experiment_ended()
     return True
-
-
-def _get_training_steps(mode, experiment, dataloader, clean_experiment_dir, version_spec):
-    exceptions = 0
-    try:
-        epoc_count = version_spec[version_parameters.EPOC_COUNT]
-    except KeyError:
-        epoc_count = 1
-        exceptions += 1
-    try:
-        train_samples = dataloader.get_train_sample_count()
-        if train_samples is None:
-            raise NotImplementedError()
-    except (NotImplementedError, KeyError):
-        train_samples = 1
-        exceptions += 1
-    if exceptions == 2:
-        return None
-
-    if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
-        return 1
-    else:
-        try:
-            batch_size = version_spec[version_parameters.BATCH_SIZE]
-        except KeyError:
-            batch_size = 1
-        complete_steps = batch_size * epoc_count * train_samples
-        try:
-            global_step = experiment.get_trained_step_count()
-        except NotImplementedError:
-            global_step = 0
-        if global_step is None or experiment.reset_steps:
-            return complete_steps
-        elif clean_experiment_dir and not experiment.allow_delete_experiment_dir:
-            return complete_steps
-        else:
-            if complete_steps > global_step:
-                return complete_steps - global_step
-            else:
-                return 0
 
 
 def _get_experiment_dir(experiment_name, version_spec, mode):

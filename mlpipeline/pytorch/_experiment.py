@@ -33,10 +33,8 @@ class BaseTorchExperimentABC(ExperimentABC):
             self.log("No checkpoint")
 
     def get_trained_step_count(self):
-        ret_val = (self.epocs_params
-                   * self.dataloader.get_train_sample_count()
-                   / self.dataloader.batch_size)
-        self.log("steps_trained: {}".format(ret_val))
+        ret_val = self.epocs_params
+        self.log("epochs_trained: {}".format(ret_val))
         return ret_val
 
     def save_checkpoint(self, epoch):

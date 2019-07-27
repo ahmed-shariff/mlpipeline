@@ -149,7 +149,7 @@ class BaseTorchDataLoader(DataLoaderABC):
     def __init__(self,
                  datasets,
                  pytorch_dataset_factory,
-                 batch_size,
+                 batch_size=1,
                  train_transforms=[],
                  test_transforms=[]):
         super().__init__()

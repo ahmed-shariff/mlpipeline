@@ -272,7 +272,11 @@ def set_logger(experiment_mode=ExperimentModeKeys.TEST, no_log=True, log_file=No
 
 
 def is_no_log():
-    return LOGGER.EXPERIMENT_MODE == ExecutionModeKeys.TEST or LOGGER.NO_LOG
+    return _is_test_mode() or LOGGER.NO_LOG
+
+
+def _is_test_mode():
+    return LOGGER.EXPERIMENT_MODE == ExecutionModeKeys.TEST
 
 
 def _genName():
@@ -348,7 +352,7 @@ def copy_related_files(experiment, dst_dir):
     log("Copying imported custom scripts to {}".format(dst_dir))
     for file in experiment.__related_files:
         if is_no_log():
-            log("Not copying in TEST mode: file - {}".format(file))
+            log("Not copying in TEST mode and NO LOG mode: file - {}".format(file))
         else:
             shutil.copy(file, dst_dir)
             log("\tCopied {}".format(file))
@@ -586,3 +590,20 @@ def _load_file_as_module(file_path):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+class iterator():
+    def __init__(self, iterable, test_iterations=1):
+        self.iterable = iter(iterable)
+        self.test_iterations = test_iterations
+        self._current_iteration = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if _is_test_mode() and self.test_iterations is not None:
+            if self._current_iteration >= self.test_iterations:
+                raise StopIteration
+        self._current_iteration += 1
+        return next(self.iterable)

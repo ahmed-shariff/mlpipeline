@@ -1,6 +1,7 @@
 from mlpipeline.utils import (ExecutionModeKeys,
                               Versions,
-                              MetricContainer)
+                              MetricContainer,
+                              iterator)
 from mlpipeline.base import (ExperimentABC,
                              DataLoaderABC,
                              DataLoaderCallableWrapper)
@@ -58,8 +59,8 @@ class TestingExperiment(ExperimentABC):
         self.log("steps: {}".format(steps))
         self.log("calling input fn")
         input_fn()
-        for epoc in range(3):
-            for idx in range(6):
+        for epoc in iterator(range(6)):
+            for idx in iterator(range(6), 2):
                 metric_container.a.update(idx)
                 metric_container.b.update(idx*2)
                 self.log("Epoc: {}   step: {}".format(epoc, idx))
