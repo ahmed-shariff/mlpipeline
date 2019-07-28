@@ -1,6 +1,6 @@
 import torch
 from mlpipeline.base import DataLoaderABC
-from mlpipeline.utils import ExecutionModeKeys
+from mlpipeline.entities import ExecutionModeKeys
 
 
 class BaseTorchDataLoader(DataLoaderABC):

@@ -1,6 +1,9 @@
 import subprocess
-from mlpipeline import (mlpipeline_execute_exeperiment, mlpipeline_execute_pipeline, get_experiment)
-from mlpipeline.utils import (ExperimentModeKeys, ExperimentWrapper)
+from mlpipeline.api import (mlpipeline_execute_exeperiment,
+                            mlpipeline_execute_pipeline,
+                            get_experiment,
+                            ExperimentWrapper)
+from mlpipeline.entities import ExperimentModeKeys
 
 
 def train_experiment_with_whitelist():

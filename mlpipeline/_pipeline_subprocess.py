@@ -2,26 +2,23 @@ import os
 import sys
 import shutil
 import socket
-import argparse
 import logging
 import traceback
 import mlflow
 
 from datetime import datetime
-
-from mlpipeline.utils import (ExperimentModeKeys,
-                              ExecutionModeKeys,
-                              version_parameters,
-                              log_special_tokens,
+from mlpipeline import (log,
+                        MetricContainer)
+from mlpipeline.utils import (log_special_tokens,
                               _VersionLog,
-                              console_colors,
-                              log,
                               set_logger,
                               add_script_dir_to_PATH,
-                              is_no_log,
-                              MetricContainer,
                               _PipelineConfig,
                               _load_file_as_module)
+from mlpipeline.entities import (ExperimentModeKeys,
+                                 ExecutionModeKeys,
+                                 version_parameters,
+                                 console_colors)
 from mlpipeline.base._utils import DummyDataloader
 import mlpipeline._default_configurations as _default_config
 CONFIG = _PipelineConfig()
@@ -210,7 +207,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
                     raise
             if isinstance(train_output, MetricContainer):
-                train_output = train_output.log_metrics(log_to_file=False, complete_epoc=True)
+                train_output = train_output.log_metrics(log_to_file=False, complete_epoch=True)
             if isinstance(train_output, str):
                 log("Experiment traning loop output: {0}".format(train_output))
             log(log_special_tokens.TRAINING_COMPLETE)
@@ -226,7 +223,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                     input_fn=input_fn)
                 log("Eval on train set: ")
                 if isinstance(train_results, MetricContainer):
-                    train_results = train_results.log_metrics(complete_epoc=True, name_prefix="TRAIN_")
+                    train_results = train_results.log_metrics(complete_epoch=True, name_prefix="TRAIN_")
                 elif isinstance(train_results, str):
                     log("{0}".format(train_results))
                 else:
@@ -252,7 +249,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 eval_results = current_experiment.evaluate_loop(input_fn=input_fn)
                 log("Eval on train set:")
                 if isinstance(eval_results, MetricContainer):
-                    eval_results = eval_results.log_metrics(complete_epoc=True, name_prefix="TEST_")
+                    eval_results = eval_results.log_metrics(complete_epoch=True, name_prefix="TEST_")
                 elif isinstance(eval_results, str):
                     log("{0}".format(eval_results))
                 else:
@@ -276,8 +273,8 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
             _add_to_and_return_result_string("Eval on test  set: {0}".format(eval_results))
             _add_to_and_return_result_string("-------------------------------------------")
             _add_to_and_return_result_string("EXECUTION SUMMERY:")
-            _add_to_and_return_result_string("Number of epocs: {0}".format(
-                version_spec[version_parameters.EPOC_COUNT]))
+            _add_to_and_return_result_string("Number of epochs: {0}".format(
+                version_spec[version_parameters.EPOCH_COUNT]))
             _add_to_and_return_result_string("Parameters for this version: {0}".format(version_spec))
             _add_to_and_return_result_string("-------------------------------------------")
             _add_to_and_return_result_string("EXPERIMENT SUMMERY:")
@@ -464,53 +461,6 @@ def _save_results_to_file(resultString, experiment):
     CONFIG.executed_experiments[experiment.name].version.moveExecutingToExecuted()
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Machine Learning Pipeline\n"
-                                     "(DEPRECATED) use `mlpipeline`")
-    parser.add_argument("file_path", help='The file path of the experiment to be executed')
-    parser.add_argument("experiments_dir",
-                        help='The directory in which the experiments reside,'
-                        ' also where the results are to stored')
-    parser.add_argument('-r', '--run',
-                        help='Will set the pipeline to execute the pipline fully,'
-                        ' if not set will be executed in test mode',
-                        action='store_true')
-    parser.add_argument('-u', '--use-history',
-                        help='If set will use the history log to determine'
-                        ' if a experiment script has been executed.',
-                        action='store_true')
-    parser.add_argument('-n', '--no_log',
-                        help='If set non of the logs will be appended to the log files.',
-                        action='store_true')
-    parser.add_argument('-e', '--export',
-                        help='If set, will run the experiment in export mode instead of training/eval loop.',
-                        action='store_true')
-    parser.add_argument('--whitelist-versions',
-                        help='Of the versions added in the experiment script, the versions to execute',
-                        nargs="*")
-    parser.add_argument('--blacklist-versions',
-                        help='Of the versions added in the experiment script, the versions not to execute',
-                        nargs="*")
-    argv = parser.parse_args()
-
-    if argv.run:
-        experiment_mode = ExperimentModeKeys.RUN
-        if argv.export:
-            log("Ignoring `-e/--export`")
-    elif argv.export:
-        experiment_mode = ExperimentModeKeys.EXPORT
-    else:
-        experiment_mode = ExperimentModeKeys.TEST
-
-    _execute_exeperiment(argv.file_path,
-                         argv.experiments_dir,
-                         experiment_mode,
-                         argv.no_log,
-                         whitelist_versions=argv.whitelist_versions,
-                         blacklist_versions=argv.blacklist_versions,
-                         _cmd_mode=True)
-
-
 def _execute_exeperiment(file_path,
                          experiments_dir,
                          experiment_mode=ExperimentModeKeys.TEST,
@@ -602,7 +552,3 @@ def _execute_exeperiment(file_path,
                                        blacklist_versions=blacklist_versions)
     os.chdir(cwd)
     return output
-
-
-if __name__ == "__main__":
-    main()

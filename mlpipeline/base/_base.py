@@ -1,8 +1,8 @@
-from mlpipeline.utils import Versions
-from mlpipeline.utils import ExecutionModeKeys
-from mlpipeline.utils import log
-from mlpipeline.utils import copy_related_files
-from mlpipeline.utils import _collect_related_files
+from mlpipeline.utils._utils import (Versions,
+                                     log,
+                                     copy_related_files,
+                                     _collect_related_files)
+from mlpipeline.entities import ExecutionModeKeys
 import logging
 
 
@@ -172,13 +172,13 @@ This function will be called to log a summery of the dataloader when logging the
 
     def get_train_sample_count(self):
         '''
-returns the number of datapoints being used as the training dataset. This will be used to assess the number of epocs during training and evaluating.
+returns the number of datapoints being used as the training dataset. This will be used to assess the number of epochs during training and evaluating.
 '''
         raise NotImplementedError()
 
     def get_test_sample_count(self):
         '''
-returns the number of datapoints being used as the testing dataset. This will be used to assess the number of epocs during training and evaluating.
+returns the number of datapoints being used as the testing dataset. This will be used to assess the number of epochs during training and evaluating.
 '''
         raise NotImplementedError()
 

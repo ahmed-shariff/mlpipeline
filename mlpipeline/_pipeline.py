@@ -1,18 +1,15 @@
 import os
 import sys
-# import subprocess
 import configparser
 import socket
-import argparse
 import logging
 from multiprocessing import Process
-from mlpipeline.utils import (log,
-                              log_special_tokens,
-                              set_logger,
+from mlpipeline import log
+from mlpipeline.utils import (set_logger,
                               is_no_log,
-                              ExperimentModeKeys,
-                              ExperimentWrapper,
                               _PipelineConfig)
+from mlpipeline.entities import ExperimentModeKeys
+from mlpipeline.base import ExperimentWrapper
 from mlpipeline._pipeline_subprocess import _execute_exeperiment
 import mlpipeline._default_configurations as _default_config
 # why not check for this
@@ -190,46 +187,3 @@ def _init_pipeline(experiment_mode, experiments_dir=None, no_log=False, experime
     CONFIG.logger = set_logger(experiment_mode=CONFIG.experiment_mode,
                                no_log=CONFIG.no_log,
                                log_file=log_file)
-
-
-def main(argv=None):
-    parser = argparse.ArgumentParser(description="Machine Learning Pipeline\n"
-                                     "(DEPRECATED) use `mlpipeline`")
-    parser.add_argument('-r', '--run',
-                        help='Will set the pipeline to execute the pipline fully,'
-                        ' if not set will be executed in test mode',
-                        action='store_true')
-    parser.add_argument('-u', '--use-history',
-                        help='If set will use the history log to determine '
-                        'if a experiment script has been executed.',
-                        action='store_true')
-    parser.add_argument('-n', '--no_log',
-                        help='If set non of the logs will be appended to the log files.',
-                        action='store_true')
-    parser.add_argument('-e', '--export',
-                        help='If set, will run the experiment in export mode instead of training/eval loop.',
-                        action='store_true')
-    argv = parser.parse_args()
-    if argv.run and argv.export:
-        print("ERROR: Cannot have both 'run' and 'export'")
-        return
-    if argv.run:
-        experiment_mode = ExperimentModeKeys.RUN
-    elif argv.export:
-        experiment_mode = ExperimentModeKeys.EXPORT
-    else:
-        experiment_mode = ExperimentModeKeys.TEST
-
-    # if argv.use_history:#any("h" in s for s in unused_argv):
-    #     USE_HISTORY = True
-    # else:
-    #     USE_HISTORY = False
-
-    _init_pipeline(experiment_mode, no_log=argv.no_log, _cmd_mode=True)
-    log_special_tokens.log_session_started()
-    _mlpipeline_main_loop()
-    log_special_tokens.log_session_ended()
-
-
-if __name__ == "__main__":
-    main()

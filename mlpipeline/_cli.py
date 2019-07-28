@@ -3,9 +3,10 @@ import sys
 from multiprocessing import Process, Queue
 
 from mlpipeline.utils import (_PipelineConfig,
-                              log_special_tokens,
-                              ExperimentModeKeys,
-                              ExperimentWrapper)
+                              log_special_tokens)
+
+from mlpipeline.entities import ExperimentModeKeys
+from mlpipeline.base import ExperimentWrapper
 from mlpipeline._pipeline import (_init_pipeline,
                                   _mlpipeline_main_loop)
 from mlpipeline._pipeline_subprocess import _execute_exeperiment

@@ -11,60 +11,13 @@ from easydict import EasyDict
 from inspect import getsourcefile
 from datetime import datetime
 import mlpipeline._default_configurations as _default_config
+from mlpipeline.entities import (ExecutionModeKeys,
+                                 ExperimentModeKeys,
+                                 console_colors,
+                                 version_parameters)
 import mlflow
 
 LOGGER = None
-
-
-class ExperimentModeKeys():
-    '''
-    Enum class that defines the keys to use to specify the execution mode of the experiment
-'''
-    RUN = 'Run'
-    TEST = 'Test'
-    EXPORT = 'Export'
-
-
-class ExecutionModeKeys():
-    '''
-    Enum class that defines the keys to use to specify the execution mode the pipeline is currently at.
-'''
-    TRAIN = 'Train'
-    TEST = 'Test'
-
-
-class console_colors():
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    BLACK_FG = "\033[30m"
-    RED_FG = "\033[31m"
-    GREEN_FG = "\033[32m"
-    YELLOW_FG = "\033[33m"
-    BLUE_FG = "\033[34m"
-    MEGENTA_FG = "\033[35m"
-    CYAN_FG = "\033[36m"
-    WHITE_FG = "\033[37m"
-    BLACK_BG = "\033[40m"
-    RED_BG = "\033[41m"
-    GREEN_BG = "\033[42m"
-    YELLOW_BG = "\033[43m"
-    BLUE_BG = "\033[44m"
-    MEGENTA_BG = "\033[45m"
-    CYAN_BG = "\033[46m"
-    WHITE_BG = "\033[47m"
-
-
-class version_parameters():
-    '''
-    Enum class that defines eums for some of the parameters used in versions
-'''
-    NAME = "name"
-    DATALOADER = "dataloader"
-    BATCH_SIZE = "batch_size"
-    EPOC_COUNT = "epoc_count"
-    LEARNING_RATE = "learning_rate"
-    EXPERIMENT_DIR_SUFFIX = "experiment_dir_suffix"
-    ORDER = "order"
 
 
 class log_special_tokens():
@@ -121,11 +74,11 @@ class Versions():
     def __init__(self,
                  dataloader,
                  batch_size,
-                 epoc_count,
+                 epoch_count,
                  **kwargs):
         self._default_values = EasyDict(dataloader=dataloader,
                                         batch_size=batch_size,
-                                        epoc_count=epoc_count,
+                                        epoch_count=epoch_count,
                                         **kwargs)
         self._order_index = 0
         self._versions = {}
@@ -134,7 +87,7 @@ class Versions():
                     name,
                     dataloader=None,
                     batch_size=None,
-                    epoc_count=None,
+                    epoch_count=None,
                     experiment_dir_suffix=None,
                     order=None,
                     custom_paramters={},
@@ -145,7 +98,7 @@ class Versions():
         v.name = name
         v.dataloader = self._default_values.dataloader if dataloader is None else dataloader
         v.batch_size = self._default_values.batch_size if batch_size is None else batch_size
-        v.epoc_count = self._default_values.epoc_count if epoc_count is None else epoc_count
+        v.epoch_count = self._default_values.epoch_count if epoch_count is None else epoch_count
         if order is None:
             v.order = self._order_index
             self._order_index += 1
@@ -360,15 +313,15 @@ def copy_related_files(experiment, dst_dir):
 
 
 class Metric():
-    def __init__(self,  track_average_epoc_count=1):
+    def __init__(self,  track_average_epoch_count=1):
         self.count = 0
         self.value = 0
         # self.global_count = 0
         # self.global_value = 0
-        self.epoc_count = 0
-        self.epoc_value = 0
-        self.track_average_epoc_count = track_average_epoc_count
-        if self.track_average_epoc_count < 1:
+        self.epoch_count = 0
+        self.epoch_value = 0
+        self.track_average_epoch_count = track_average_epoch_count
+        if self.track_average_epoch_count < 1:
             raise ValueError("`track_average_count` should be more than or equal to 0")
         self.track_value_list = []
 
@@ -377,27 +330,27 @@ class Metric():
             raise Exception("Value should be int or float, but got {}".format(type(value)))
         self.count += count
         self.value += value
-        self.epoc_count += count
-        self.epoc_value += value
+        self.epoch_count += count
+        self.epoch_value += value
 
     def reset(self):
         self.count = 0
         self.value = 0
 
-    def reset_epoc(self):
-        if len(self.track_value_list) == self.track_average_epoc_count:
+    def reset_epoch(self):
+        if len(self.track_value_list) == self.track_average_epoch_count:
             try:
-                self.track_value_list = self.track_value_list[1:] + [self.epoc_value/self.epoc_count]
+                self.track_value_list = self.track_value_list[1:] + [self.epoch_value/self.epoch_count]
             except ZeroDivisionError:
                 self.track_value_list = self.track_value_list[1:] + [0]
         else:
             try:
-                self.track_value_list.append(self.epoc_value/self.epoc_count)
+                self.track_value_list.append(self.epoch_value/self.epoch_count)
             except ZeroDivisionError:
                 self.track_value_list.append(0)
 
-        self.epoc_count = 0
-        self.epoc_value = 0
+        self.epoch_count = 0
+        self.epoch_value = 0
 
     def avg(self):
         try:
@@ -405,14 +358,14 @@ class Metric():
         except ZeroDivisionError:
             return 0
 
-    def avg_epoc(self):
+    def avg_epoch(self):
         try:
-            return self.epoc_value/self.epoc_count
+            return self.epoch_value/self.epoch_count
         except ZeroDivisionError:
             return 0
 
     def get_tracking_average(self):
-        if len(self.track_value_list) < self.track_average_epoc_count:
+        if len(self.track_value_list) < self.track_average_epoch_count:
             return 0
         try:
             return statistics.mean(self.track_value_list)
@@ -420,7 +373,7 @@ class Metric():
             return 0
 
     def get_tracking_delta(self):
-        if len(self.track_value_list) == self.track_average_epoc_count:
+        if len(self.track_value_list) == self.track_average_epoch_count:
             return sum(
                 [self.track_value_list[idx + 1] -
                  self.track_value_list[idx]
@@ -446,7 +399,7 @@ class MetricContainer(EasyDict):
 
     __setitem__ = __setattr__
 
-    def __init__(self, metrics=None, track_average_epoc_count=1, **kwargs):
+    def __init__(self, metrics=None, track_average_epoch_count=1, **kwargs):
         metrics_dict = {}
         if metrics is not None:
             if not isinstance(metrics, list):
@@ -455,22 +408,22 @@ class MetricContainer(EasyDict):
             if isinstance(metrics[0], dict):
                 for metrics_set in metrics:
                     for metric in metrics_set["metrics"]:
-                        metric_value = Metric(track_average_epoc_count=track_average_epoc_count)
+                        metric_value = Metric(track_average_epoch_count=track_average_epoch_count)
                         try:
-                            metric_value.track_average_epoc_count = metrics_set['track_average_epoc_count']
+                            metric_value.track_average_epoch_count = metrics_set['track_average_epoch_count']
                         except KeyError:
                             pass
                         metrics_dict[metric] = metric_value
             else:
                 for metric in metrics:
-                    metrics_dict[metric] = Metric(track_average_epoc_count=track_average_epoc_count)
+                    metrics_dict[metric] = Metric(track_average_epoch_count=track_average_epoch_count)
 
             for k, v in metrics_dict.items():
                 setattr(self, k, v)
 
             for k in self.__class__.__dict__.keys():
                 if not (k.startswith('__') and k.endswith('__')) and\
-                   k not in ('update', 'pop', 'reset', 'log_metrics', 'reset_epoc', '_get_matrics_subset'):
+                   k not in ('update', 'pop', 'reset', 'log_metrics', 'reset_epoch', '_get_matrics_subset'):
                     setattr(self, k, getattr(self, k))
 
     def _get_matrics_subset(self, metrics, return_named_tuples=False):
@@ -492,7 +445,7 @@ class MetricContainer(EasyDict):
     def log_metrics(self,
                     metrics=None,
                     log_to_file=True,
-                    complete_epoc=False,
+                    complete_epoch=False,
                     items_per_row=3,
                     charachters_per_row=50,
                     name_prefix="",
@@ -503,8 +456,8 @@ class MetricContainer(EasyDict):
         row_char_count = 0
         for name, metric in self._get_matrics_subset(metrics, return_named_tuples=True):
             name = name_prefix + name
-            if complete_epoc:
-                value = metric.avg_epoc()
+            if complete_epoch:
+                value = metric.avg_epoch()
             else:
                 value = metric.avg()
 
@@ -534,9 +487,9 @@ class MetricContainer(EasyDict):
             return_string += printable_string
         return return_string
 
-    def reset_epoc(self, metrics=None):
+    def reset_epoch(self, metrics=None):
         for metric in self._get_matrics_subset(metrics):
-            metric.reset_epoc()
+            metric.reset_epoch()
 
 
 # Implimented as a class with properties for clarity and safty of sanity
@@ -571,18 +524,6 @@ class _PipelineConfig():
         self.mlflow_tracking_uri = mlflow_tracking_uri
         self.logger = logger
         self.cmd_mode = cmd_mode
-
-
-class ExperimentWrapper():
-    '''
-    To be used when using the programmetic interface to execute the pipeline
-    '''
-    def __init__(self, file_path, whitelist_versions=None, blacklist_versions=None):
-        self.file_path = file_path
-        if whitelist_versions and blacklist_versions:
-            raise ValueError("Both `whitelist_versions` and `blacklist_versions` cannot be set!")
-        self.whitelist_versions = whitelist_versions
-        self.blacklist_versions = blacklist_versions
 
 
 def _load_file_as_module(file_path):

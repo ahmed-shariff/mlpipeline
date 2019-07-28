@@ -1,7 +1,7 @@
 import os
 import torch
 from mlpipeline.base import ExperimentABC
-from mlpipeline.utils import ExecutionModeKeys
+from mlpipeline.entities import ExecutionModeKeys
 
 
 class BaseTorchExperimentABC(ExperimentABC):
@@ -12,7 +12,7 @@ class BaseTorchExperimentABC(ExperimentABC):
         self.logging_iteration = None
         self.criterion = None
         self.optimizer = None
-        self.checkpoint_saving_per_epoc = None
+        self.checkpoint_saving_per_epoch = None
         self.use_cuda = None
         self.save_history_checkpoints_count = None
 
@@ -29,11 +29,11 @@ class BaseTorchExperimentABC(ExperimentABC):
             self.log("Loading parameters from: {}".format(self.file_name))
             self.load_history_checkpoint(self.file_name)
         else:
-            self.epocs_params = 0
+            self.epochs_params = 0
             self.log("No checkpoint")
 
     def get_trained_step_count(self):
-        ret_val = self.epocs_params
+        ret_val = self.epochs_params
         self.log("epochs_trained: {}".format(ret_val))
         return ret_val
 
@@ -58,12 +58,12 @@ class BaseTorchExperimentABC(ExperimentABC):
             'validation': self.dataloader.datasets.validation_dataset,
             'lr_scheduler': None if self.lr_scheduler is None else self.lr_scheduler.state_dict()
         }, self.file_name)
-        self.log("Saved checkpoint for epoc: {} at {}".format(epoch + 1, self.file_name))
+        self.log("Saved checkpoint for epoch: {} at {}".format(epoch + 1, self.file_name))
 
     def load_history_checkpoint(self, checkpoint_file_name, load_optimizer=True, export_mode=False):
         self.log("Loading: {}".format(checkpoint_file_name), log_to_file=True)
         checkpoint = torch.load(checkpoint_file_name)
-        self.epocs_params = checkpoint['epoch']
+        self.epochs_params = checkpoint['epoch']
         self.model.load_state_dict(checkpoint['state_dict'])
         if export_mode:
             return
@@ -75,21 +75,21 @@ class BaseTorchExperimentABC(ExperimentABC):
         if checkpoint['validation'] is not None:
             self.dataloader.set_validation_set(checkpoint['validation'])
 
-    def get_ancient_checkpoint_file_name(self, epoc_from_last=None):
-        if epoc_from_last is None:
-            epoc_from_last = self.save_history_checkpoints_count
-        elif epoc_from_last == 0:
+    def get_ancient_checkpoint_file_name(self, epoch_from_last=None):
+        if epoch_from_last is None:
+            epoch_from_last = self.save_history_checkpoints_count
+        elif epoch_from_last == 0:
             history_file_name = self.history_file_name.format(0)
             if os.path.exists(history_file_name):
                 return history_file_name
-        elif epoc_from_last > self.save_history_checkpoints_count:
-            raise ValueError("`epoc_from_last` should be less than or equal "
+        elif epoch_from_last > self.save_history_checkpoints_count:
+            raise ValueError("`epoch_from_last` should be less than or equal "
                              "`self.save_history_checkpoints_count`.")
 
         if self.save_history_checkpoints_count < 1:
             raise ValueError("save_history_checkpoints_count should be 1 or higher. "
                              "Else set it to None to completely disable this feature.")
-        for history_idx in range(epoc_from_last, 0, -1):
+        for history_idx in range(epoch_from_last, 0, -1):
             history_file_name = self.history_file_name.format(history_idx)
             if os.path.exists(history_file_name):
                 return history_file_name

@@ -25,3 +25,15 @@ class DataLoaderCallableWrapper():
         if self._dataloader is None:
             self._dataloader = self.dataloader_class(*self.args, **self.kwargs)
         return self._dataloader
+
+
+class ExperimentWrapper():
+    '''
+    To be used when using the programmetic interface to execute the pipeline
+    '''
+    def __init__(self, file_path, whitelist_versions=None, blacklist_versions=None):
+        self.file_path = file_path
+        if whitelist_versions and blacklist_versions:
+            raise ValueError("Both `whitelist_versions` and `blacklist_versions` cannot be set!")
+        self.whitelist_versions = whitelist_versions
+        self.blacklist_versions = blacklist_versions

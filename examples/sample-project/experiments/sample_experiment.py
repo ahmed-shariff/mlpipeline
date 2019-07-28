@@ -1,7 +1,7 @@
-from mlpipeline.utils import (ExecutionModeKeys,
-                              Versions,
-                              MetricContainer,
-                              iterator)
+from mlpipeline.entities import ExecutionModeKeys
+from mlpipeline import (Versions,
+                        MetricContainer,
+                        iterator)
 from mlpipeline.base import (ExperimentABC,
                              DataLoaderABC,
                              DataLoaderCallableWrapper)
@@ -47,36 +47,31 @@ class TestingExperiment(ExperimentABC):
         self.log(f"Dataloader: {self.dataloader}")
         self.current_version = self.current_version
 
-    def get_trained_step_count(self):
-        return 10
-
-    def train_loop(self, input_fn, steps):
-        metric_container = MetricContainer(metrics=['1', 'b', 'c'], track_average_epoc_count=5)
+    def train_loop(self, input_fn):
+        metric_container = MetricContainer(metrics=['1', 'b', 'c'], track_average_epoch_count=5)
         metric_container = MetricContainer(metrics=[{'metrics': ['a', 'b', 'c']},
                                                     {'metrics': ['2', 'd', 'e'],
-                                                     'track_average_epoc_count': 10}],
-                                           track_average_epoc_count=5)
-        self.log("steps: {}".format(steps))
+                                                     'track_average_epoch_count': 10}],
+                                           track_average_epoch_count=5)
         self.log("calling input fn")
         input_fn()
-        for epoc in iterator(range(6)):
+        for epoch in iterator(range(6)):
             for idx in iterator(range(6), 2):
                 metric_container.a.update(idx)
                 metric_container.b.update(idx*2)
-                self.log("Epoc: {}   step: {}".format(epoc, idx))
+                self.log("Epoch: {}   step: {}".format(epoch, idx))
                 self.log("a {}".format(metric_container.a.avg()))
                 self.log("b {}".format(metric_container.b.avg()))
 
                 if idx % 3 == 0:
                     metric_container.reset()
             metric_container.log_metrics(['a', '2'])
-            metric_container.reset_epoc()
+            metric_container.reset_epoch()
         metric_container.log_metrics()
         self.log("trained: {}".format(self.model.train()))
         self.copy_related_files("experiments/exports")
 
-    def evaluate_loop(self, input_fn, steps):
-        self.log("steps: {}".format(steps))
+    def evaluate_loop(self, input_fn):
         self.log("calling input fn")
         input_fn()
         metrics = MetricContainer(['a', 'b'])
