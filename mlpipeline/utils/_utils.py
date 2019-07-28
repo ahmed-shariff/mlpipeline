@@ -72,9 +72,9 @@ class Versions():
     Also prvodes helper functions to define and add new parameter versions.
     '''
     def __init__(self,
-                 dataloader,
-                 batch_size,
-                 epoch_count,
+                 dataloader=None,
+                 batch_size=None,
+                 epoch_count=None,
                  **kwargs):
         self._default_values = EasyDict(dataloader=dataloader,
                                         batch_size=batch_size,
