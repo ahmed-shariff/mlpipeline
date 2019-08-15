@@ -3,6 +3,7 @@ import sys
 import configparser
 import socket
 import logging
+from pathlib import Path
 from multiprocessing import Process
 from mlpipeline import log
 from mlpipeline.utils import (set_logger,
@@ -10,7 +11,7 @@ from mlpipeline.utils import (set_logger,
                               _PipelineConfig)
 from mlpipeline.entities import ExperimentModeKeys
 from mlpipeline.base import ExperimentWrapper
-from mlpipeline._pipeline_subprocess import _execute_exeperiment
+from mlpipeline._pipeline_subprocess import _execute_exeperiment_process
 import mlpipeline._default_configurations as _default_config
 # why not check for this
 if sys.version_info < (3, 5):
@@ -43,17 +44,15 @@ def _mlpipeline_main_loop(experiments=None):
 
 
 def _execute_subprocess(experiment_name, whitelist_versions=None, blacklist_versions=None):
-    p = Process(target=_execute_exeperiment,
-                kwargs={
-                    'file_path': experiment_name,
-                    'experiments_dir': CONFIG.experiments_dir,
-                    'experiment_mode': CONFIG.experiment_mode,
-                    'no_log': CONFIG.no_log,
-                    'whitelist_versions': whitelist_versions,
-                    'blacklist_versions': blacklist_versions,
-                    'mlflow_tracking_uri': CONFIG.mlflow_tracking_uri,
-                    '_cmd_mode': CONFIG.cmd_mode
-                })
+    p = _execute_exeperiment_process(file_path=experiment_name,
+                                     experiments_dir=CONFIG.experiments_dir,
+                                     experiment_mode=CONFIG.experiment_mode,
+                                     no_log=CONFIG.no_log,
+                                     whitelist_versions=whitelist_versions,
+                                     blacklist_versions=blacklist_versions,
+                                     mlflow_tracking_uri=CONFIG.mlflow_tracking_uri,
+                                     experiments_output_dir=CONFIG.experiments_outputs_dir,
+                                     _cmd_mode=CONFIG.cmd_mode)
     p.start()
     p.join()
     return p.exitcode
@@ -61,7 +60,7 @@ def _execute_subprocess(experiment_name, whitelist_versions=None, blacklist_vers
 
 def _get_experiment(experiments=None, completed_experiments=[]):
     if CONFIG.cmd_mode:
-        _config_update()
+        _config_update(CONFIG)
     if experiments is not None:
         for experiment in experiments:
             if experiment.file_path not in completed_experiments:
@@ -125,7 +124,7 @@ def _config_update():
             for experiment in listed_experiments:
                 experiment_script_path = os.path.join(CONFIG.experiments_dir, experiment)
                 if not os.path.exists(experiment_script_path):
-                    listed_experiments.remove(experiment_script_path)
+                    listed_experiments.remove(experiment)
                     log("Script missing: {}".format(experiment_script_path),
                         level=logging.WARNING)
             CONFIG.listed_experiments = listed_experiments

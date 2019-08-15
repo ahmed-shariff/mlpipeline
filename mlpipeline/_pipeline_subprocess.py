@@ -5,7 +5,7 @@ import socket
 import logging
 import traceback
 import mlflow
-
+from multiprocessing import Process
 from datetime import datetime
 from mlpipeline import (log,
                         MetricContainer)
@@ -566,3 +566,28 @@ def _execute_exeperiment(file_path,
                                        blacklist_versions=blacklist_versions)
     os.chdir(cwd)
     return output
+
+
+def _execute_exeperiment_process(file_path,
+                                 experiments_dir,
+                                 experiment_mode=ExperimentModeKeys.TEST,
+                                 no_log=False,
+                                 whitelist_versions=None,
+                                 blacklist_versions=None,
+                                 experiments_output_dir=None,
+                                 mlflow_tracking_uri=None,
+                                 _cmd_mode=False,
+                                 multiprocessing_version_quque=None):
+    return Process(target=_execute_exeperiment,
+                   kwargs={
+                       'file_path': file_path,
+                       'experiments_dir': experiments_dir,
+                       'experiment_mode': experiment_mode,
+                       'no_log': no_log,
+                       'whitelist_versions': whitelist_versions,
+                       'blacklist_versions': blacklist_versions,
+                       'experiments_output_dir': experiments_output_dir,
+                       'mlflow_tracking_uri': mlflow_tracking_uri,
+                       '_cmd_mode': _cmd_mode,
+                       'multiprocessing_version_quque': multiprocessing_version_quque
+                   })

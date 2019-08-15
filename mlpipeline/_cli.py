@@ -1,6 +1,6 @@
 import click
 import sys
-from multiprocessing import Process, Queue
+from multiprocessing import Queue
 
 from mlpipeline.utils import (_PipelineConfig,
                               log_special_tokens)
@@ -9,7 +9,7 @@ from mlpipeline.entities import ExperimentModeKeys
 from mlpipeline.base import ExperimentWrapper
 from mlpipeline._pipeline import (_init_pipeline,
                                   _mlpipeline_main_loop)
-from mlpipeline._pipeline_subprocess import _execute_exeperiment
+from mlpipeline._pipeline_subprocess import _execute_exeperiment_process
 
 
 def get_run():
@@ -119,18 +119,14 @@ def process_pipeline_single(config, whitelist_versions, blacklist_versions, b, *
         all_option = config.all_option
         if all_option:
             quque = Queue()
-            p = Process(target=_execute_exeperiment,
-                        kwargs={
-                            'file_path': config.listed_experiments[0],
-                            'experiments_dir': config.experiments_dir,
-                            'experiment_mode': config.experiment_mode,
-                            'no_log': config.no_log,
-                            'whitelist_versions': whitelist_versions,
-                            'blacklist_versions': blacklist_versions,
-                            'mlflow_tracking_uri': config.mlflow_tracking_uri,
-                            '_cmd_mode': True,
-                            'multiprocessing_version_quque': quque
-                        })
+            p = _execute_exeperiment_process(file_path=config.listed_experiments[0],
+                                             experiments_dir=config.experiments_dir,
+                                             experiment_mode=config.experiment_mode,
+                                             no_log=config.no_log,
+                                             whitelist_versions=whitelist_versions,
+                                             blacklist_versions=blacklist_versions,
+                                             _cmd_mode=True,
+                                             multiprocessing_version_quque=quque)
             p.start()
             p.join()
             whitelist_versions = quque.get()

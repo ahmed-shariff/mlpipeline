@@ -1,6 +1,6 @@
 import os
 from mlpipeline._pipeline import (_mlpipeline_main_loop, _init_pipeline)
-from mlpipeline._pipeline_subprocess import (_execute_exeperiment,
+from mlpipeline._pipeline_subprocess import (_execute_exeperiment_process,
                                              _get_experiment_dir)
 from mlpipeline.utils import _load_file_as_module
 from mlpipeline.base import ExperimentWrapper
@@ -34,13 +34,13 @@ def mlpipeline_execute_exeperiment(file_path,
                                    experiments_output_dir=None):
     experiments_dir = os.path.abspath(experiments_dir)
     file_path = os.path.relpath(os.path.abspath(file_path), experiments_dir)
-    while _execute_exeperiment(file_path,
-                               experiments_dir=experiments_dir,
-                               experiment_mode=experiment_mode,
-                               no_log=no_log,
-                               whitelist_versions=whitelist_versions,
-                               blacklist_versions=blacklist_versions,
-                               experiments_output_dir=experiments_output_dir):
+    while _execute_exeperiment_process(file_path,
+                                       experiments_dir=experiments_dir,
+                                       experiment_mode=experiment_mode,
+                                       no_log=no_log,
+                                       whitelist_versions=whitelist_versions,
+                                       blacklist_versions=blacklist_versions,
+                                       experiments_output_dir=experiments_output_dir):
         if experiment_mode == ExperimentModeKeys.TEST:
             break
 
