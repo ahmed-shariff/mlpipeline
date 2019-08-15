@@ -60,7 +60,7 @@ def _execute_subprocess(experiment_name, whitelist_versions=None, blacklist_vers
 
 def _get_experiment(experiments=None, completed_experiments=[]):
     if CONFIG.cmd_mode:
-        _config_update(CONFIG)
+        _config_update()
     if experiments is not None:
         for experiment in experiments:
             if experiment.file_path not in completed_experiments:

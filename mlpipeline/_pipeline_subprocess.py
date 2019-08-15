@@ -103,6 +103,8 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                                                     CONFIG.experiment_mode)
             current_experiment._current_version = version_spec
             current_experiment._experiment_dir = experiment_dir
+            dataloader = version_spec[version_parameters.DATALOADER]
+            current_experiment._dataloader = dataloader()
 
             try:
                 current_experiment.setup_model()
@@ -329,6 +331,10 @@ def _get_experiment_dir(experiment_name, version_spec, mode):
                                       "experiment_ckpts/{}{}".format(experiment_name,
                                                                      experiment_dir_suffix))
         tracking_uri = CONFIG.mlflow_tracking_uri
+    from six.moves import urllib
+    scheme = urllib.parse.urlparse(tracking_uri).scheme
+    if len(scheme) == 1 or len(scheme) == 0:
+        tracking_uri = "file://" + tracking_uri
     return experiment_dir, tracking_uri
 
 

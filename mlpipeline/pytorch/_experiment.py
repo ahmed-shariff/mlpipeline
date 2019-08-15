@@ -72,8 +72,8 @@ class BaseTorchExperimentABC(ExperimentABC):
             self.optimizer.load_state_dict(checkpoint['optimizer'])
             if checkpoint['lr_scheduler'] is not None:
                 self.lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-        if checkpoint['validation'] is not None:
-            self.dataloader.set_validation_set(checkpoint['validation'])
+        # if checkpoint['validation'] is not None:
+        #     self.dataloader.set_validation_set(checkpoint['validation'])
 
     def get_ancient_checkpoint_file_name(self, epoch_from_last=None):
         if epoch_from_last is None:
