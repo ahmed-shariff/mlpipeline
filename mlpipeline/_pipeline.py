@@ -14,7 +14,7 @@ from mlpipeline.base import ExperimentWrapper
 from mlpipeline._pipeline_subprocess import _execute_exeperiment_process
 import mlpipeline._default_configurations as _default_config
 # why not check for this
-if sys.version_info < (3, 5):
+if sys.version_info < (3, 5, 5):
     sys.stderr.write("ERROR: python version should be greater than or equal 3.5\n")
     sys.exit(1)
 

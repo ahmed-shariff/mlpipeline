@@ -1,4 +1,4 @@
-import torch
+import torch.utils.data
 from mlpipeline.base import DataLoaderABC
 from mlpipeline.entities import ExecutionModeKeys
 

@@ -146,17 +146,14 @@ def process_pipeline_single(config, whitelist_versions, blacklist_versions, b, *
             blacklist_versions = None
             executed_versions.append(whitelist_versions)
             whitelist_versions = [whitelist_versions]
-        p = Process(target=_execute_exeperiment,
-                    kwargs={
-                        'file_path': config.listed_experiments[0],
-                        'experiments_dir': config.experiments_dir,
-                        'experiment_mode': config.experiment_mode,
-                        'no_log': config.no_log,
-                        'whitelist_versions': whitelist_versions,
-                        'blacklist_versions': blacklist_versions,
-                        'mlflow_tracking_uri': config.mlflow_tracking_uri,
-                        '_cmd_mode': True
-                    })
+        p = _execute_exeperiment_process(file_path=config.listed_experiments[0],
+                                         experiments_dir=config.experiments_dir,
+                                         experiment_mode=config.experiment_mode,
+                                         no_log=config.no_log,
+                                         whitelist_versions=whitelist_versions,
+                                         blacklist_versions=blacklist_versions,
+                                         _cmd_mode=True,
+                                         mlflow_tracking_uri=config.mlflow_tracking_uri)
         p.start()
         p.join()
         exitcode = p.exitcode
