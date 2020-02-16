@@ -7,6 +7,7 @@
    - Added current_version, experiment_dir and dataloader to be experiments properties
    - Bug fixes:
      - Moved each version of an experiment to be executed in a separate sub-process
+     - Ensured change to cwd when using api.get_experiment and exposed dataloader to the returned experiment
 ** 2.0.a.3 [2019-07-16]
    - Several methods from the base classes are not required to be implemented. They are:
      - Experiment.setup_model
