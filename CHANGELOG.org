@@ -21,6 +21,7 @@
      - Moved each version of an experiment to be executed in a separate sub-process
      - Fixed bug with scheme and windows path for mlflow
      - Fixed bug with cli not completely migrated to using process abstraction
+     - Ensured change to cwd when using api.get_experiment and exposed dataloader to the returned experiment
 ** 2.0.a.3 [2019-07-16]
    - Several methods from the base classes are not required to be implemented. They are:
      - Experiment.setup_model
