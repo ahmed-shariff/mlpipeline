@@ -2,15 +2,12 @@
 * Random thoughts
 - How can the data pipeline be more disciplined?
   - Set up best practices
-- Have one pipeline which is always running, and perhaps another script to send messages to the main pipeline in-place of  
+- Have one pipeline which is always running, and perhaps another script to send messages to the main pipeline in-place of, this idea was regarding scheduling.
 - The pipeline is already implementation-agnostic, but how does that translate to a salable system? perhaps add another layer which is specific to the library on top of which a model is to b executed? 
 - Online and offline pipelines? The current system is designed for offline training. 
 - How can the deployment process be automated using the pipeline?
 - Better version control for the models and data/metadata.
 - Group a set of files as a experiment.
-- Allow the model scripts to infer if the pipeline is in TEST or TRAIN mode.
-- The classification steps passed to the training component, what if the steps calculated that way is too confusing? like I only want the number of epocs be passed?
-- ~~ clean a easier logging.~~
 
 
 * DONE Add a function that will be executed at the end of the loop, where I can add stuff like moving files, etc.
@@ -19,7 +16,7 @@
 * TODO Rethink allow_delete_model_dir
 * TODO Rethink how the training time is recorded to ensure a model that ended up failing to train can be relaunched. Or is this even an good behaviour to have?
 * TODO Let the user override the checking-modified-time behaviour
-* TODO mlflow integration [6/7]                                         :1_9:
+* DONE mlflow integration [8/8]                                         :1_9:
 ** DONE Will be using the mlflow tracking interface
    CLOSED: [2019-03-03 Sun 20:12]
 ** DONE The experiment name will be the name of the script running [4/4]
@@ -37,28 +34,68 @@
 ** DONE The train and eval functions are expected to return a metric_container which will be logged in both normal and mlflow
    CLOSED: [2019-03-03 Sun 16:33]
    - The training output will not be logged by mlflow. Only the eval outputs will be logged, since that is what we want to look at. If someone want the train output they'd have to log it during the run.
-** TODO The UI will be launched along side the pipeline. Also allow to launch the ui separately through the mlpipeline.
+** CANCELED The UI will be launched along side the pipeline. Also allow to launch the ui separately through the mlpipeline.
+   CLOSED: [2019-07-15 Mon 18:38]
+   :LOGBOOK:
+   - CLOSING NOTE [2019-07-15 Mon 18:38] \\
+     This makes no sense if the tracking uri is set to a remote server
+   :END:
 ** DONE The files copied will also be logged through the mlflow artifacts
    CLOSED: [2019-03-03 Sun 21:10]
 ** DONE The version will log the values passed through it as parameters of the run
    CLOSED: [2019-03-04 Mon 14:21]\
-** TODO Tag if a model is in being trained or finished training.
-* TODO tensorboardx integration                                         :1_9:
-* TODO Refactors [2/3]                                                 :1_10:
+** CANCELED Tag if a model is in being trained or finished training.
+   CLOSED: [2019-07-15 Mon 18:39]
+   :LOGBOOK:
+   - CLOSING NOTE [2019-07-15 Mon 18:39] \\
+     mlflow runs already have a runstatus
+   :END:
+* TODO tensorboardx integration                                         
+* DONE Refactors [3/3]                                                 :1_10:
 ** DONE Rename model to experiment
    CLOSED: [2019-03-04 Mon 13:26]
 ** DONE Versions use easydict
    CLOSED: [2019-03-03 Sun 21:03]
-** TODO Reduce the dependencies on Versions.
-* INPROGRESS Add a separate export mode                                 :1_9:
+** DONE Reduce the dependencies on Versions.
+   CLOSED: [2019-07-15 Mon 18:39]
+   :LOGBOOK:
+   - CLOSING NOTE [2019-07-15 Mon 18:39]
+   :END:
+* DONE Add a separate export mode                                       :1_9:
+  CLOSED: [2019-07-12 Fri 16:53]
+  :LOGBOOK:
+  - CLOSING NOTE [2019-07-12 Fri 16:53]
+  :END:
   - When in this mode, it will execute the `export_model` method for all the experiments for all versions.
-* TODO test mode and export mode try out all the versions instead of one [1/2] :1_10:
+* DONE test mode and export mode try out all the versions instead of one [2/2] :1_10:
 ** DONE in export mode
    CLOSED: [2019-03-27 Wed 14:45]
    :LOGBOOK:
    - CLOSING NOTE [2019-03-27 Wed 14:45]
    :END:
-** TODO in test mode
-* TODO mlpipeline sponsored breaks
+** DONE in test mode
+   CLOSED: [2019-07-28 Sun 14:43]
+   :LOGBOOK:
+   - CLOSING NOTE [2019-07-28 Sun 14:43]
+   :END:
+* DONE mlpipeline sponsored breaks
+  CLOSED: [2019-07-28 Sun 14:44]
+  :LOGBOOK:
+  - CLOSING NOTE [2019-07-28 Sun 14:44]
+  :END:
   - The idea is to take away the need to comment and uncomment break statements
   - additionally can have this work on multiple levels: Do you want to run a whole epoc, pass a setting, if not it'll break when it says so.
+* TODO git support
+  - git is used not to track development, but to track the experiments. 
+  - The steps
+    1. Checkout to an experiment branch. Is this necessary?
+    2. Before a run, stage everything, git the repo and store the hash. This is assuming the related files are all tracked.
+       - is it good practice to stage everything? or find a way to check all the files that are being loaded? I know I can track the files being imported, how about other files being accessed?
+	 - One way is to provide an api to open files which will track the files by itself.
+	 - [[https://stackoverflow.com/questions/2023608/check-what-files-are-open-in-python][stakoverflow: check what files are open in Python]]
+  - Another option is to look into using mlflows version control interface
+* DONE Move the pytorch base to this repo
+  CLOSED: [2019-07-28 Sun 14:44]
+  :LOGBOOK:
+  - CLOSING NOTE [2019-07-28 Sun 14:44]
+  :END:

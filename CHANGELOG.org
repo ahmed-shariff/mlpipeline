@@ -5,8 +5,22 @@
    - Added base implementation for pytroch.
    - Added a post_execution_hook, which operates the same as the pre_execution_hook and run after all train and evaluate loops are over.
    - Added current_version, experiment_dir and dataloader to be experiments properties
+   - Moved to using multiprocessing from using subprocess
+   - mlpipeline in single mode allows testing all versions of an experiment
+   - Renamed cli script to '_cli'
+   - Implemented iterator class which can be used to breaking during test mode
+   - Since the above was one of the primary reason for the `steps` calculations, removed the `step` calculations from the main pipeline
+   - Added more flexibility to how data is being loaded.
+     - train_datasets_file_path can be empty
+     - new parameter validation_data_load_function
+     - If the input to the train or evaluation loop is None, the pipeline still attempts to execute the methods. If both train and test inputs are None, the evaluate_loop will be executed only once. If train input is None while test input is not None, evaluate_loop will execute twice: once with None as the input, and the second time with the test input.
+   - None of the methods need to be implemented. If any method is not implemented, it'll simply log a message instead of throwing a tantrum.
+   - Re-organized the modules and functions
+   - Bumped minimum version of python to 3.5.5 to deal with the requirement of pandas
    - Bug fixes:
      - Moved each version of an experiment to be executed in a separate sub-process
+     - Fixed bug with scheme and windows path for mlflow
+     - Fixed bug with cli not completely migrated to using process abstraction
 ** 2.0.a.3 [2019-07-16]
    - Several methods from the base classes are not required to be implemented. They are:
      - Experiment.setup_model
