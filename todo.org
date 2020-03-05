@@ -99,3 +99,5 @@
   :LOGBOOK:
   - CLOSING NOTE [2019-07-28 Sun 14:44]
   :END:
+* TODO Rethink the steps approach; think sklearn.pipeline or https://github.com/Neuraxio/Neuraxle
+* TODO Improve testing approaches?
