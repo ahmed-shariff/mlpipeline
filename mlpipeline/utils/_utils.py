@@ -555,23 +555,27 @@ class Datasets():
     # pylint disable:too-many-arguments
 
     def __init__(self,
-                 train_dataset_file_path=None,
-                 test_dataset_file_path=None,
-                 validation_dataset_file_path=None,
+                 train_data_asset=None,
+                 test_data_asset=None,
+                 validadtion_data_asset=None,
+                 # train_dataset_file_path=None,
+                 # test_dataset_file_path=None,
+                 # validation_dataset_file_path=None,
                  class_encoding=None,
                  train_data_load_function=None,
                  test_data_load_function=None,
                  validation_data_load_function=None,
                  test_size=None,
                  # use_cache=True  # Need to implementate this one?
-                 validation_size=None):
+                 validation_size=None,
+                 **kwargs):
         """
         Keyword arguments:
-        train_dataset_file_path      -- The path to the file containing the train dataset
-        test_dataset_file_path       -- The path to the file containing the test dataset.
+        train_data_asset      -- The path to the file containing the train dataset
+        test_data_asset       -- The path to the file containing the test dataset.
                                         If this is None, a portion of the train dataset will be allocated as
                                         the test dataset based on the `test_size`.
-        validation_dataset_file_path -- The path to the file containing the validation dataset.
+        validation_data_asset -- The path to the file containing the validation dataset.
                                         If this is None, a portion of the train dataset will be allocated as
                                         the validation dataset based on the `validation_size` after
                                         allocating the test dataset.
@@ -581,40 +585,50 @@ class Datasets():
                                         The returned value should allow selecting rows using python's slicing
                                         (eg: pandas.DataFrame, python lists, numpy.array). Will be used to
                                         load the file_passed through `train_daset_file_path`,
-                                        `validation_dataset_file_path`. Also will be used to load the
-                                        `test_dataset_file_path` if `test_data_load_function` is None.
+                                        `validation_data_asset`. Also will be used to load the
+                                        `test_data_asset` if `test_data_load_function` is None.
         test_data_load_function      -- Similar to `train_data_load_function`. This parameter can be used to
                                         define a seperate loading process for the test_dataset. If
-                                        `test_dataset_file_path` is not None, this callable will be used to
+                                        `test_data_asset` is not None, this callable will be used to
                                         load the file's content. Also, if this parameter is set and
-                                        `test_dataset_file_path` is None, instead of allocating a portion of
-                                        the train_dataset as test_dataset, the files`train_dataset_file_path`
+                                        `test_data_asset` is None, instead of allocating a portion of
+                                        the train_dataset as test_dataset, the files`train_data_asset`
                                         passed will be loaded using this callable. Note that it is the
                                         callers responsibility to ensure there are no intersections between
                                         train and test dataset when data is loaded using this parameter.
         test_size                    -- Float between 0 and 1. The portion of the train dataset to allocate
-                                        as the test dataset based if `test_dataset_file_path` not given and
+                                        as the test dataset based if `test_data_asset` not given and
                                         `test_data_load_function` is None.
         validation_size              -- Float between 0 and 1. The portion of the train dataset to allocate
                                         as the validadtion dataset based if
-                                        `validation_dataset_file_path` not given.
+                                        `validation_data_asset` not given.
         """
+        # for backward compatiblity
+        if len(kwargs) > 0:
+            DeprecationWarning("train_dataset_file_path, test_dataset_file_path and validadtion_dataset_file_path are being deprecated."\
+                               " Use train_data_asset, test_data_asset and validadtion_data_asset instead")
+            if train_data_asset is None and "train_dataset_file_path" in kwargs:
+                train_data_asset = kwargs["train_dataset_file_path"]
+            if test_data_asset is None and "test_dataset_file_path" in kwargs:
+                test_data_asset = kwargs["test_dataset_file_path"]
+            if validation_data_asset is None and "validation_dataset_file_path" in kwargs:
+                validation_data_asset = kwargs["validation_dataset_file_path"]
         assert train_data_load_function is not None or \
             test_data_load_function is not None or \
             validation_data_load_function is not None, \
             'all data load functions canot be None'
-        if train_dataset_file_path is not None:
+        if train_data_asset is not None:
             log("Not setting train_dataset")
-            self._train_dataset = self._load_data(train_dataset_file_path,
+            self._train_dataset = self._load_data(train_data_asset,
                                                   train_data_load_function)
         else:
             self._train_dataset = []
 
-        if test_dataset_file_path is None:
+        if test_data_asset is None:
             if test_data_load_function is not None:
-                self._test_dataset = self._load_data(train_dataset_file_path,
+                self._test_dataset = self._load_data(train_data_asset,
                                                      test_data_load_function)
-            elif train_dataset_file_path is not None:
+            elif train_data_asset is not None:
                 if test_size is None:
                     log("Using default 'test_size': 0.1", agent="Datasets")
                     test_size = 0.1
@@ -628,11 +642,11 @@ class Datasets():
             if test_size is not None:
                 log("Ignoring 'test_size'", agent="Datasets")
             test_data_load_function = test_data_load_function or train_data_load_function
-            self._test_dataset = self._load_data(test_dataset_file_path,
+            self._test_dataset = self._load_data(test_data_asset,
                                                  test_data_load_function)
 
-        if validation_dataset_file_path is None:
-            if train_dataset_file_path is not None:
+        if validation_data_asset is None:
+            if train_data_asset is not None:
                 if validation_size is None:
                     log("Using default 'validation_size': 0.1", agent="Datasets")
                     validation_size = 0.1
@@ -647,7 +661,7 @@ class Datasets():
                 log("Ignoring 'validation_size'", agent="Datasets")
             validation_data_load_function = validation_data_load_function or \
                 test_data_load_function or train_data_load_function
-            self._validation_dataset = self._load_data(validation_dataset_file_path,
+            self._validation_dataset = self._load_data(validation_data_asset,
                                                        validation_data_load_function)
 
         if class_encoding is not None:
