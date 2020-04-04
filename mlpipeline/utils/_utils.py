@@ -557,7 +557,7 @@ class Datasets():
     def __init__(self,
                  train_data_asset=None,
                  test_data_asset=None,
-                 validadtion_data_asset=None,
+                 validation_data_asset=None,
                  # train_dataset_file_path=None,
                  # test_dataset_file_path=None,
                  # validation_dataset_file_path=None,
@@ -605,8 +605,10 @@ class Datasets():
         """
         # for backward compatiblity
         if len(kwargs) > 0:
-            DeprecationWarning("train_dataset_file_path, test_dataset_file_path and validadtion_dataset_file_path are being deprecated."\
-                               " Use train_data_asset, test_data_asset and validadtion_data_asset instead")
+            import warnings
+            
+            warnings.warn("train_dataset_file_path, test_dataset_file_path and validadtion_dataset_file_path are being deprecated."\
+                               " Use train_data_asset, test_data_asset and valiadtion_data_asset instead", DeprecationWarning)
             if train_data_asset is None and "train_dataset_file_path" in kwargs:
                 train_data_asset = kwargs["train_dataset_file_path"]
             if test_data_asset is None and "test_dataset_file_path" in kwargs:

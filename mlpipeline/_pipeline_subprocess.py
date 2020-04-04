@@ -130,7 +130,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
         else:
             log("version loaded: {0} [{1}/{2}]".format(
                 version_name,
-                len(CONFIG.executed_experiments[current_experiment.name].version.executed_versions + 1),
+                len(CONFIG.executed_experiments[current_experiment.name].version.executed_versions) + 1,
                 len(current_experiment.versions.get_version_names())),
                 modifier_1=console_colors.GREEN_FG,
                 modifier_2=console_colors.BOLD)
