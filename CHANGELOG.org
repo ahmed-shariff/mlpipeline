@@ -1,4 +1,7 @@
 * Change-log
+** master
+   - Renamed dataset_file_path to data_asset in utils.Dataset
+   - Log dataloader parameters if DataloaderWrapper class is used for the dataloader
 ** 2.0.a.4 [2019-07-24 Wed] 
    - Added function to load previously executed experiment.
    - The experiments are executed with the cwd set to the `experiments_dir`.
