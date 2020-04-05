@@ -97,7 +97,8 @@ def _experiment_main_loop(current_experiment, version_name_s, clean_experiment_d
         for version_name, version_spec in version_name_s:
             experiment_dir, _ = _get_experiment_dir(Path(current_experiment.name).stem,
                                                     version_spec,
-                                                    config.experiment_mode)
+                                                    config.experiment_mode,
+                                                    config)
             current_experiment._current_version = version_spec
             current_experiment._experiment_dir = experiment_dir
             dataloader = version_spec[version_parameters.DATALOADER]
@@ -143,7 +144,8 @@ def _experiment_main_loop(current_experiment, version_name_s, clean_experiment_d
 
         experiment_dir, tracking_uri = _get_experiment_dir(Path(current_experiment.name).stem,
                                                            version_spec,
-                                                           config.experiment_mode)
+                                                           config.experiment_mode,
+                                                           config)
         record_training = True if config.experiment_mode != ExperimentModeKeys.TEST else False
         if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
             try:
@@ -202,7 +204,7 @@ def _experiment_main_loop(current_experiment, version_name_s, clean_experiment_d
                 test__eval_steps = 1 if test__eval_steps is not None else None
                 train_eval_steps = 1 if train_eval_steps is not None else None
 
-            _save_training_time(current_experiment, version_name)
+            _save_training_time(current_experiment, version_name, config)
 
             try:
                 input_fn = dataloader.get_train_input(mode=ExecutionModeKeys.TRAIN)
@@ -312,7 +314,7 @@ def _experiment_main_loop(current_experiment, version_name_s, clean_experiment_d
             _add_to_and_return_result_string("DATALOADER	 SUMMERY:")
             _add_to_and_return_result_string(dataloader.summery)
             if record_training and not config.no_log:
-                _save_results_to_file(_add_to_and_return_result_string(), current_experiment)
+                _save_results_to_file(_add_to_and_return_result_string(), current_experiment, config)
 
         except Exception as e:
             mlflow.end_run(mlflow.entities.RunStatus.to_string(mlflow.entities.RunStatus.FAILED))
@@ -330,24 +332,24 @@ def _experiment_main_loop(current_experiment, version_name_s, clean_experiment_d
     return True
 
 
-def _get_experiment_dir(experiment_name, version_spec, mode):
+def _get_experiment_dir(experiment_name, version_spec, mode, config):
     experiment_dir_suffix = version_spec[version_parameters.EXPERIMENT_DIR_SUFFIX]
     if mode == ExperimentModeKeys.TEST:
-        experiment_dir = os.path.join(CONFIG.experiments_outputs_dir, "experiment_ckpts/temp")
+        experiment_dir = os.path.join(config.experiments_outputs_dir, "experiment_ckpts/temp")
         tracking_uri = os.path.abspath(os.path.join(experiment_dir, "mlruns_tmp"))
         shutil.rmtree(experiment_dir, ignore_errors=True)
     else:
         experiment_dir_suffix = experiment_dir_suffix \
             if experiment_dir_suffix is not None else version_spec.name
         experiment_dir_suffix = "-" + experiment_dir_suffix
-        experiment_dir = os.path.join(CONFIG.experiments_outputs_dir,
+        experiment_dir = os.path.join(config.experiments_outputs_dir,
                                       "experiment_ckpts/{}{}".format(experiment_name,
                                                                      experiment_dir_suffix))
-        tracking_uri = CONFIG.mlflow_tracking_uri
+        tracking_uri = config.mlflow_tracking_uri
     from six.moves import urllib
     scheme = urllib.parse.urlparse(tracking_uri).scheme
     if len(scheme) == 1 or len(scheme) == 0:
-        tracking_uri = "file://" + tracking_uri
+        tracking_uri = "file://" + str(Path(tracking_uri).absolute())
     return experiment_dir, tracking_uri
 
 
@@ -462,36 +464,36 @@ def _get_experiment(file_path,
     return experiment, returning_version, clean_experiment_dir
 
 
-def _save_training_time(experiment, version_):
-    if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+def _save_training_time(experiment, version_, config):
+    if config.experiment_mode == ExperimentModeKeys.TEST:
         return
     name = experiment.name
-    with open(CONFIG.training_history_log_file, "a") as log_file:
+    with open(config.training_history_log_file, "a") as log_file:
         time = datetime.now().timestamp()
-        CONFIG.executed_experiments[name].version.addExecutingVersion(version_, time)
+        config.executed_experiments[name].version.addExecutingVersion(version_, time)
         log("Executing version: {0}".format(
-            CONFIG.executed_experiments[experiment.name].version.executing_version),
+            config.executed_experiments[experiment.name].version.executing_version),
             log_to_file=False)
         log_file.write("{0}::{1}::{2}\n".format(name,
-                                                CONFIG.executed_experiments[name].version.executing_version,
+                                                config.executed_experiments[name].version.executing_version,
                                                 time))
 
 
-def _save_results_to_file(resultString, experiment):
+def _save_results_to_file(resultString, experiment, config):
     modified_dt = datetime.isoformat(datetime.fromtimestamp(
-        CONFIG.executed_experiments[experiment.name].modified_time))
+        config.executed_experiments[experiment.name].modified_time))
     result_dt = datetime.now().isoformat()
 
-    with open(CONFIG.output_file, 'a', encoding="utf-8") as outfile:
+    with open(config.output_file, 'a', encoding="utf-8") as outfile:
         outfile.write("\n[{0}]:ml-pipline: output: \n".format(result_dt))
         outfile.write(resultString)
-    with open(CONFIG.history_file, 'a', encoding="utf-8") as hist_file:
+    with open(config.history_file, 'a', encoding="utf-8") as hist_file:
         hist_file.write("{0}::{1}::{2}\n".format(
             experiment.name,
-            CONFIG.executed_experiments[experiment.name].modified_time,
-            CONFIG.executed_experiments[experiment.name].version.executing_version))
+            config.executed_experiments[experiment.name].modified_time,
+            config.executed_experiments[experiment.name].version.executing_version))
 
-    CONFIG.executed_experiments[experiment.name].version.moveExecutingToExecuted()
+    config.executed_experiments[experiment.name].version.moveExecutingToExecuted()
 
 
 def _execute_exeperiment(file_path,

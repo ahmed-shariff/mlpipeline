@@ -508,7 +508,7 @@ class PipelineConfig():
                  use_blacklist=False,
                  listed_experiments=[],
                  experiment_mode=ExperimentModeKeys.TEST,
-                 mlflow_tracking_uri='mlruns',
+                 mlflow_tracking_uri='.mlruns',
                  logger=None,
                  cmd_mode=False):
         self.experiments_dir = experiments_dir

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from mlpipeline._pipeline import (_mlpipeline_main_loop, _init_pipeline)
 from mlpipeline._pipeline_subprocess import (_execute_exeperiment,
                                              _get_experiment_dir,
@@ -37,11 +38,25 @@ def mlpipeline_execute_exeperiment(experiment,
                                    blacklist_versions=None,
                                    pipeline_config=None):
     if pipeline_config is None:
-        pipeline_config = PipelineConfig()
-    pipeline_config.output_file = os.path.join(pipeline_config.experiments_dir, "output")
-    pipeline_config.history_file = os.path.join(pipeline_config.experiments_dir, "history")
-    pipeline_config.training_history_log_file = os.path.join(pipeline_config.experiments_dir, "t_history")
-    pipeline_config.log_file = os.path.join(pipeline_config.experiments_dir, "log")
+        pipeline_config = PipelineConfig(experiments_dir="",
+                                         experiments_outputs_dir="outputs",
+                                         mlflow_tracking_uri=".mlruns")
+    pipeline_config.experiment_mode = experiment_mode
+    pipeline_config.output_file = Path(os.path.join(pipeline_config.experiments_outputs_dir, "output"))
+    pipeline_config.history_file = Path(os.path.join(pipeline_config.experiments_outputs_dir, "history"))
+    pipeline_config.training_history_log_file = Path(os.path.join(pipeline_config.experiments_outputs_dir, "t_history"))
+    pipeline_config.log_file = Path(os.path.join(pipeline_config.experiments_outputs_dir, "log"))
+
+    pipeline_config.output_file.parent.mkdir(parents=True, exist_ok=True)
+    pipeline_config.history_file.parent.mkdir(parents=True, exist_ok=True)
+    pipeline_config.training_history_log_file.parent.mkdir(parents=True, exist_ok=True)
+    pipeline_config.log_file.parent.mkdir(parents=True, exist_ok=True)
+
+    pipeline_config.output_file.touch()
+    pipeline_config.history_file.touch()
+    pipeline_config.training_history_log_file.touch()
+    pipeline_config.log_file.touch()
+    
     pipeline_config.logger = set_logger(experiment_mode=experiment_mode,
                                         no_log=False,
                                         log_file=pipeline_config.log_file)
@@ -110,7 +125,7 @@ def get_experiment(file_path, experiment_dir, version_name, mlflow_tracking_uri=
         version_spec = experiment.versions.get_version(version_name)
         experiment_dir, _ = _get_experiment_dir(experiment.name.split(".")[-2],
                                                 version_spec,
-                                                None)
+                                                None, PipelineConfig(experiment_mode=ExperimentModeKeys.RUN))
         # if mlflow_tracking_uri is None:
         #     run_id = None
         # else:
