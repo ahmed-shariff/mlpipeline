@@ -1,5 +1,6 @@
 import subprocess
 from mlpipeline.api import (mlpipeline_execute_exeperiment,
+                            mlpipeline_execute_exeperiment_from_script,
                             mlpipeline_execute_pipeline,
                             get_experiment,
                             ExperimentWrapper)
@@ -9,19 +10,19 @@ from mlpipeline.entities import ExperimentModeKeys
 def train_experiment_with_whitelist():
     print("*"*20, "EXPERIMENT WITH WHITELIST", "*"*20)
     subprocess.run(["rm", "-rf", "experiments/outputs"])
-    mlpipeline_execute_exeperiment("experiments/sample_experiment.py",
-                                   "experiments",
-                                   ExperimentModeKeys.RUN,
-                                   whitelist_versions=["version5"])
+    mlpipeline_execute_exeperiment_from_script("experiments/sample_experiment.py",
+                                               "experiments",
+                                               ExperimentModeKeys.RUN,
+                                               whitelist_versions=["version5"])
 
 
 def train_experiment_with_blacklist():
     print("*"*20, "EXPERIMENT WITH BLACKLIST", "*"*20)
     subprocess.run(["rm", "-rf", "experiments/outputs"])
-    mlpipeline_execute_exeperiment("experiments/sample_experiment.py",
-                                   "experiments",
-                                   ExperimentModeKeys.RUN,
-                                   blacklist_versions=["version2", "version5"])
+    mlpipeline_execute_exeperiment_from_script("experiments/sample_experiment.py",
+                                               "experiments",
+                                               ExperimentModeKeys.RUN,
+                                               blacklist_versions=["version2", "version5"])
 
 
 def train_pipeline_with_whitelist():
@@ -48,9 +49,15 @@ def load_experiment():
                          "version5"))
 
 
+def train_experiment_with_object():
+    from experiments.sample_experiment import EXPERIMENT
+    print("*"*20, "PIPELINE WITH OBJECT", "*"*20)
+    mlpipeline_execute_exeperiment(EXPERIMENT, ExperimentModeKeys.RUN)
+
 if __name__ == "__main__":
     train_pipeline_with_blacklist()
     train_pipeline_with_whitelist()
     train_experiment_with_blacklist()
     train_experiment_with_whitelist()
     load_experiment()
+    train_experiment_with_object()

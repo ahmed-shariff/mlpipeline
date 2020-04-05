@@ -7,6 +7,7 @@ import traceback
 import mlflow
 from multiprocessing import Process
 from datetime import datetime
+from pathlib import Path
 from mlpipeline import (log,
                         MetricContainer)
 from mlpipeline.utils import (log_special_tokens,
@@ -72,35 +73,31 @@ class _AddToAndReturnResultString():
         return self.result_string
 
 
-def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions=None):
+def _experiment_main_loop(current_experiment, version_name_s, clean_experiment_dir, config):
     '''
     Returns False if there are no more versions to execute or a version resulted in an exception
     Returns True otherwise.
     '''
-    current_experiment, version_name_s, \
-        clean_experiment_dir = _get_experiment(file_path,
-                                               whitelist_versions=whitelist_versions,
-                                               blacklist_versions=blacklist_versions)
     _add_to_and_return_result_string = _AddToAndReturnResultString()
     if current_experiment is None:
-        if CONFIG.cmd_mode:
+        if config.cmd_mode:
             sys.exit(3)
         else:
             return False
     log_special_tokens.log_experiment_started()
     log("Experiment loaded: {0}".format(current_experiment.name))
-    if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+    if config.experiment_mode == ExperimentModeKeys.TEST:
         log_special_tokens.log_mode_test()
-    elif CONFIG.experiment_mode == ExperimentModeKeys.EXPORT:
+    elif config.experiment_mode == ExperimentModeKeys.EXPORT:
         log_special_tokens.log_mode_exporting()
     else:
         log_special_tokens.log_mode_train()
 
-    if CONFIG.experiment_mode == ExperimentModeKeys.EXPORT:
+    if config.experiment_mode == ExperimentModeKeys.EXPORT:
         for version_name, version_spec in version_name_s:
-            experiment_dir, _ = _get_experiment_dir(current_experiment.name.split(".")[-2],
+            experiment_dir, _ = _get_experiment_dir(Path(current_experiment.name).stem,
                                                     version_spec,
-                                                    CONFIG.experiment_mode)
+                                                    config.experiment_mode)
             current_experiment._current_version = version_spec
             current_experiment._experiment_dir = experiment_dir
             dataloader = version_spec[version_parameters.DATALOADER]
@@ -114,7 +111,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
             current_experiment.export_model()
             log("Exported model {}".format(version_name))
         log_special_tokens.log_experiment_ended()
-        if CONFIG.cmd_mode:
+        if config.cmd_mode:
             sys.exit(3)
         else:
             return False
@@ -130,7 +127,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
         else:
             log("version loaded: {0} [{1}/{2}]".format(
                 version_name,
-                len(CONFIG.executed_experiments[current_experiment.name].version.executed_versions) + 1,
+                len(config.executed_experiments[current_experiment.name].version.executed_versions) + 1,
                 len(current_experiment.versions.get_version_names())),
                 modifier_1=console_colors.GREEN_FG,
                 modifier_2=console_colors.BOLD)
@@ -144,10 +141,10 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
 
         log("Version_spec: {}".format(version_spec))
 
-        experiment_dir, tracking_uri = _get_experiment_dir(current_experiment.name.split(".")[-2],
+        experiment_dir, tracking_uri = _get_experiment_dir(Path(current_experiment.name).stem,
                                                            version_spec,
-                                                           CONFIG.experiment_mode)
-        record_training = True if CONFIG.experiment_mode != ExperimentModeKeys.TEST else False
+                                                           config.experiment_mode)
+        record_training = True if config.experiment_mode != ExperimentModeKeys.TEST else False
         if clean_experiment_dir and current_experiment.allow_delete_experiment_dir:
             try:
                 current_experiment.clean_experiment_dir(experiment_dir)
@@ -188,7 +185,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
             except NotImplementedError:
                 log("`setup_model` not implemented. Ignoring.")
             try:
-                current_experiment.pre_execution_hook(mode=CONFIG.experiment_mode)
+                current_experiment.pre_execution_hook(mode=config.experiment_mode)
             except NotImplementedError:
                 log("`pre_execution_hook` not implemented. Ignoring.")
             os.makedirs(experiment_dir, exist_ok=True)
@@ -201,7 +198,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 train_eval_steps = dataloader.get_train_sample_count()
             except NotImplementedError:
                 train_eval_steps = None
-            if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+            if config.experiment_mode == ExperimentModeKeys.TEST:
                 test__eval_steps = 1 if test__eval_steps is not None else None
                 train_eval_steps = 1 if train_eval_steps is not None else None
 
@@ -231,7 +228,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 train_results = "Training loop failed: {0}".format(str(e))
                 log(train_results, logging.ERROR)
                 log(traceback.format_exc(), logging.ERROR)
-                if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+                if config.experiment_mode == ExperimentModeKeys.TEST:
                     raise
 
             try:
@@ -263,7 +260,7 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                 train_results = "Training evaluation failed: {0}".format(str(e))
                 log(train_results, logging.ERROR)
                 log(traceback.format_exc(), logging.ERROR)
-                if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+                if config.experiment_mode == ExperimentModeKeys.TEST:
                     raise
 
             try:
@@ -290,13 +287,13 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
                     eval_results = "Test evaluation failed: {0}".format(str(e))
                     log(eval_results, logging.ERROR)
                     log(traceback.format_exc(), logging.ERROR)
-                    if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+                    if config.experiment_mode == ExperimentModeKeys.TEST:
                         raise
             else:
                 log('Not executing `evaluate_loop` as testing input data is `None`')
 
             try:
-                current_experiment.post_execution_hook(mode=CONFIG.experiment_mode)
+                current_experiment.post_execution_hook(mode=config.experiment_mode)
             except NotImplementedError:
                 log("`post_execution_hook` not implemented. Ignoring.")
 
@@ -314,17 +311,17 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
             _add_to_and_return_result_string("-------------------------------------------")
             _add_to_and_return_result_string("DATALOADER	 SUMMERY:")
             _add_to_and_return_result_string(dataloader.summery)
-            if record_training and not CONFIG.no_log:
+            if record_training and not config.no_log:
                 _save_results_to_file(_add_to_and_return_result_string(), current_experiment)
 
         except Exception as e:
             mlflow.end_run(mlflow.entities.RunStatus.to_string(mlflow.entities.RunStatus.FAILED))
-            if CONFIG.experiment_mode == ExperimentModeKeys.TEST:
+            if config.experiment_mode == ExperimentModeKeys.TEST:
                 raise
             else:
                 log("Exception: {0}".format(str(e)), logging.ERROR)
                 log(traceback.format_exc(), logging.ERROR)
-                if CONFIG.cmd_mode:
+                if config.cmd_mode:
                     sys.exit(1)
                 else:
                     return False
@@ -583,9 +580,11 @@ def _execute_exeperiment(file_path,
         output = _get_experiment(file_path, whitelist_versions, blacklist_versions, True)
         multiprocessing_version_quque.put(output[0].versions.get_version_names())
     else:
-        output = _experiment_main_loop(file_path,
-                                       whitelist_versions=whitelist_versions,
-                                       blacklist_versions=blacklist_versions)
+        current_experiment, version_name_s, \
+            clean_experiment_dir = _get_experiment(file_path,
+                                                   whitelist_versions=whitelist_versions,
+                                                   blacklist_versions=blacklist_versions)
+        output = _experiment_main_loop(current_experiment, version_name_s, clean_experiment_dir, CONFIG)
     os.chdir(cwd)
     return output
 

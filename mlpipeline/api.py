@@ -1,12 +1,15 @@
 import os
 from mlpipeline._pipeline import (_mlpipeline_main_loop, _init_pipeline)
 from mlpipeline._pipeline_subprocess import (_execute_exeperiment,
-                                             _get_experiment_dir)
-from mlpipeline.utils import _load_file_as_module
-from mlpipeline.base import ExperimentWrapper
-from mlpipeline.entities import ExperimentModeKeys
+                                             _get_experiment_dir,
+                                             _ExecutedExperiment,
+                                             _experiment_main_loop)
+from mlpipeline.utils import (_load_file_as_module, PipelineConfig, _VersionLog, set_logger)
+from mlpipeline.base import ExperimentWrapper, ExperimentABC
+from mlpipeline.entities import (ExperimentModeKeys, console_colors)
+from mlpipeline import log
 
-__all__ = ['mlpipeline_execute_exeperiment', 'mlpipeline_execute_pipeline', 'get_experiment', 'ExperimentWrapper']
+__all__ = ['mlpipeline_execute_exeperiment', 'mlpipeline_execute_exeperiment_from_script', 'mlpipeline_execute_pipeline', 'get_experiment', 'ExperimentWrapper']
 
 
 def mlpipeline_execute_pipeline(experiments,
@@ -26,14 +29,59 @@ def mlpipeline_execute_pipeline(experiments,
     _mlpipeline_main_loop(experiments)
 
 
-def mlpipeline_execute_exeperiment(file_path,
-                                   experiments_dir,
+# Need to integrate the functionality of the pipeline tracking training processes.
+# For now the mlpipeline_execute_exeperiment_from_script is recommended
+def mlpipeline_execute_exeperiment(experiment,
                                    experiment_mode=ExperimentModeKeys.TEST,
-                                   no_log=False,
                                    whitelist_versions=None,
                                    blacklist_versions=None,
-                                   mlflow_tracking_uri=None,
-                                   experiments_output_dir=None):
+                                   pipeline_config=None):
+    if pipeline_config is None:
+        pipeline_config = PipelineConfig()
+    pipeline_config.output_file = os.path.join(pipeline_config.experiments_dir, "output")
+    pipeline_config.history_file = os.path.join(pipeline_config.experiments_dir, "history")
+    pipeline_config.training_history_log_file = os.path.join(pipeline_config.experiments_dir, "t_history")
+    pipeline_config.log_file = os.path.join(pipeline_config.experiments_dir, "log")
+    pipeline_config.logger = set_logger(experiment_mode=experiment_mode,
+                                        no_log=False,
+                                        log_file=pipeline_config.log_file)
+    if not isinstance(experiment, ExperimentABC):
+        log("`experiment` is not of type `mlpipeline.base.ExperimentABC`", 20)
+    experiment.name = experiment.__class__.__name__
+    experiment._collect_related_files(pipeline_config.experiments_dir)
+    versions = experiment.versions
+    
+    log("{0}{1}Processing experiment: {2}{3}".format(console_colors.BOLD,
+                                                     console_colors.BLUE_FG,
+                                                     experiment.name,
+                                                     console_colors.RESET))
+    if whitelist_versions is not None or blacklist_versions is not None:
+        versions.filter_versions(whitelist_versions=whitelist_versions,
+                                 blacklist_versions=blacklist_versions)
+
+    pipeline_config.executed_experiments[experiment.name] = _ExecutedExperiment(_VersionLog(), 0)
+    if experiment_mode == ExperimentModeKeys.EXPORT:
+        _experiment_main_loop(experiment, versions.get_versions(), True, pipeline_config)
+    else:
+        for v, k in versions.get_versions():
+            if _experiment_main_loop(experiment, v, True, pipeline_config):
+                pipeline_config.executed_experiments[experiment.name].version.addExecutingVersion(v, 0)
+            else:
+                log("Pipeline Stoped", 30)
+            
+        
+        
+    
+
+    
+def mlpipeline_execute_exeperiment_from_script(file_path,
+                                               experiments_dir,
+                                               experiment_mode=ExperimentModeKeys.TEST,
+                                               no_log=False,
+                                               whitelist_versions=None,
+                                               blacklist_versions=None,
+                                               mlflow_tracking_uri=None,
+                                               experiments_output_dir=None):
     experiments_dir = os.path.abspath(experiments_dir)
     file_path = os.path.relpath(os.path.abspath(file_path), experiments_dir)
     while _execute_exeperiment(file_path,
