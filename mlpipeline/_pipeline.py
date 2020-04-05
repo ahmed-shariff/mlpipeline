@@ -8,7 +8,7 @@ from multiprocessing import Process
 from mlpipeline import log
 from mlpipeline.utils import (set_logger,
                               is_no_log,
-                              _PipelineConfig)
+                              PipelineConfig)
 from mlpipeline.entities import ExperimentModeKeys
 from mlpipeline.base import ExperimentWrapper
 from mlpipeline._pipeline_subprocess import _execute_exeperiment_process
@@ -19,9 +19,9 @@ if sys.version_info < (3, 5, 5):
     sys.exit(1)
 
 
-# Use_history is a lil funkcy for now, so leaving it here. If using should move it to _PipelineConfig
+# Use_history is a lil funkcy for now, so leaving it here. If using should move it to PipelineConfig
 USE_HISTORY = False
-CONFIG = _PipelineConfig()
+CONFIG = PipelineConfig()
 
 
 def _mlpipeline_main_loop(experiments=None):

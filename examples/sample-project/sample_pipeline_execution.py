@@ -49,8 +49,8 @@ def load_experiment():
 
 
 if __name__ == "__main__":
-    # train_pipeline_with_blacklist()
-    # train_pipeline_with_whitelist()
-    # train_experiment_with_blacklist()
+    train_pipeline_with_blacklist()
+    train_pipeline_with_whitelist()
+    train_experiment_with_blacklist()
     train_experiment_with_whitelist()
     load_experiment()

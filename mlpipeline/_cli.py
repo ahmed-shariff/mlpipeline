@@ -2,7 +2,7 @@ import click
 import sys
 from multiprocessing import Queue
 
-from mlpipeline.utils import (_PipelineConfig,
+from mlpipeline.utils import (PipelineConfig,
                               log_special_tokens)
 
 from mlpipeline.entities import ExperimentModeKeys
@@ -61,7 +61,7 @@ def get_test(all_option_enable=False, all_option_help=''):
               'from `mlp.config`. If not refaults to `mlruns`')
 @click.pass_context
 def cli(ctx, no_log, experiments, experiments_dir, mlflow_tracking_uri):  # , experiments_output_dir):
-    config = _PipelineConfig()
+    config = PipelineConfig()
     config.no_log = no_log
     config.listed_experiments = experiments
     config.experiments_dir = experiments_dir

@@ -493,7 +493,7 @@ class MetricContainer(EasyDict):
 
 
 # Implimented as a class with properties for clarity and safty of sanity
-class _PipelineConfig():
+class PipelineConfig():
     '''
     Used by pipeline to maintin the configurations across multiple functions
     '''

@@ -13,7 +13,7 @@ from mlpipeline.utils import (log_special_tokens,
                               _VersionLog,
                               set_logger,
                               add_script_dir_to_PATH,
-                              _PipelineConfig,
+                              PipelineConfig,
                               _load_file_as_module)
 from mlpipeline.entities import (ExperimentModeKeys,
                                  ExecutionModeKeys,
@@ -21,7 +21,7 @@ from mlpipeline.entities import (ExperimentModeKeys,
                                  console_colors)
 from mlpipeline.base._utils import DummyDataloader, DataLoaderCallableWrapper
 import mlpipeline._default_configurations as _default_config
-CONFIG = _PipelineConfig()
+CONFIG = PipelineConfig()
 
 
 class _ExecutedExperiment():
@@ -165,14 +165,17 @@ def _experiment_main_loop(file_path, whitelist_versions=None, blacklist_versions
         mlflow.start_run(run_name=version_name, run_id=run_id)
         # Logging the versions params
         for k, v in version_spec.items():
-            mlflow.log_param(k, str(v))
+            if k != version_parameters.DATALOADER:
+                mlflow.log_param(k, str(v))
 
-        if isinstance(version_spec[version_parameters.DATALOADER], DataLoaderCallableWrapper):
-            _dataloader_wrapper = version_spec[version_parameters.DATALOADER]
+        _dataloader_wrapper = version_spec[version_parameters.DATALOADER]
+        if isinstance(_dataloader_wrapper, DataLoaderCallableWrapper):
             mlflow.log_param(version_parameters.DATALOADER, _dataloader_wrapper.dataloader_class)
             mlflow.log_param("dataloader_args", _dataloader_wrapper.args)
             for k, v in _dataloader_wrapper.kwargs.items():
                 mlflow.log_param("dataloader_" + k, str(v))
+        else:
+            mlflow.log_param(version_parameters.DATALOADER, _dataloader_wrapper)
 
         # eval_complete=False
         # LOGGER.setLevel(logging.INFO)
