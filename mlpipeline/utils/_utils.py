@@ -221,6 +221,7 @@ def set_logger(experiment_mode=ExperimentModeKeys.TEST, no_log=True, log_file=No
     LOGGER.EXPERIMENT_MODE = experiment_mode
     LOGGER.NO_LOG = no_log
     LOGGER.LOG_FILE = log_file
+    logging.getLogger("mlflow").handlers[0].setFormatter(formatter)
     return LOGGER
 
 
