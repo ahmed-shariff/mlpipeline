@@ -51,7 +51,9 @@ def load_experiment():
 
 def train_experiment_with_object():
     from experiments.sample_experiment import EXPERIMENT
-    print("*"*20, "PIPELINE WITH OBJECT", "*"*20)
+    print("*"*20, "PIPELINE WITH OBJECT (TEST)", "*"*20)
+    mlpipeline_execute_exeperiment(EXPERIMENT, ExperimentModeKeys.TEST)
+    print("*"*20, "PIPELINE WITH OBJECT (RUN)", "*"*20)
     mlpipeline_execute_exeperiment(EXPERIMENT, ExperimentModeKeys.RUN)
 
 if __name__ == "__main__":

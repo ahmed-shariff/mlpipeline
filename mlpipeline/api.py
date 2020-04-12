@@ -37,6 +37,9 @@ def mlpipeline_execute_exeperiment(experiment,
                                    whitelist_versions=None,
                                    blacklist_versions=None,
                                    pipeline_config=None):
+    '''
+    Warning: Experimental interface
+    '''
     if pipeline_config is None:
         pipeline_config = PipelineConfig(experiments_dir="",
                                          experiments_outputs_dir="outputs",
@@ -75,8 +78,11 @@ def mlpipeline_execute_exeperiment(experiment,
                                  blacklist_versions=blacklist_versions)
 
     pipeline_config.executed_experiments[experiment.name] = _ExecutedExperiment(_VersionLog(), 0)
-    if experiment_mode == ExperimentModeKeys.EXPORT:
-        _experiment_main_loop(experiment, versions.get_versions(), True, pipeline_config)
+    if experiment_mode != ExperimentModeKeys.RUN:
+        versions_list = versions.get_versions()
+        _experiment_main_loop(experiment,
+                              versions_list if experiment_mode == ExperimentModeKeys.EXPORT else versions_list[0][0],
+                              True, pipeline_config)
     else:
         for v, k in versions.get_versions():
             if _experiment_main_loop(experiment, v, True, pipeline_config):
