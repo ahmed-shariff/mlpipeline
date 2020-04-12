@@ -1,5 +1,5 @@
 * Change-log
-** master
+** 2.0.a.6 [2020-04-12 Sun]
    - Moved the to mulitiprocessing from subprocess
    - Single mode now can test all versions of a single experiment
    - Implemetation of the iterator which breaks on test mode and Removed the `steps` from the main pipeline process
