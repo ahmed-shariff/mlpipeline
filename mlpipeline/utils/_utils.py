@@ -107,6 +107,15 @@ class Versions():
         v.experiment_dir_suffix = experiment_dir_suffix
         self._versions[name] = v
 
+    def add_versions(self, versions):
+        '''
+        Add the versions from a Versions object
+        '''
+        try:
+            self._versions.update(versions._versions)
+        except AttributeError:
+            log("Passed value is not a version object", 30)
+        
     def get_version(self, version_name):
         '''
         Returns the version with name `version_name`.
@@ -155,7 +164,7 @@ class Versions():
         log("Versions before filter: {}".format(self.get_version_names()))
         self._versions = filtered_versions
         log("Versions after filter: {}".format(self.get_version_names()))
-
+        
 
 class _VersionLog():
     '''
