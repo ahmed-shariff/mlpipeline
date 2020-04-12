@@ -1,5 +1,13 @@
 * Change-log
 ** master
+   - Moved the to mulitiprocessing from subprocess
+   - Single mode now can test all versions of a single experiment
+   - Implemetation of the iterator which breaks on test mode and Removed the `steps` from the main pipeline process
+   - Added more flexibility to how datasets are loaded and moved Datasets to utils
+     - train_dataset_file_path can now be empty
+     - validation_data_load function as a new param
+   - Moved the execute_experiment function to Process
+   - Version loaded also shows progress in the form of [/]
    - Renamed dataset_file_path to data_asset in utils.Dataset
    - Log dataloader parameters if DataloaderWrapper class is used for the dataloader
    - Added API function to run experiment with instantiated experiment object

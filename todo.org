@@ -100,4 +100,6 @@
   - CLOSING NOTE [2019-07-28 Sun 14:44]
   :END:
 * TODO Rethink the steps approach; think sklearn.pipeline or https://github.com/Neuraxio/Neuraxle
+** or maybe add a module for sklearn.pipeline?
+** [[pytorch lightning][https://pytorch-lightning.readthedocs.io/en/stable/]]
 * TODO Improve testing approaches?
