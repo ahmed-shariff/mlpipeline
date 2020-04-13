@@ -362,6 +362,13 @@ def _get_mlflow_run_id(tracking_uri, current_experiment, clean_experiment_dir, v
                       for exp in mlflow_client.list_experiments()
                       if current_experiment.name == exp.name]
     current_experiment.mlflow_client = mlflow_client
+    if mlflow.active_run() is not None:
+        log("Ending spurious run", 30)
+        try:
+            mlflow.end_run()
+        except mlflow.exceptions.MlflowException:
+            mlflow.tracking.fluent._active_run_stack = []
+
     run_id = None
     if len(experiment_ids) > 0:
         runs = mlflow_client.search_runs(experiment_ids,
