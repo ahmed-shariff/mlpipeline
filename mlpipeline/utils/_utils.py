@@ -147,7 +147,7 @@ class Versions():
         If whitelist_versions is passed, the versions not listed will be dropped from the versions.
         If nither parameters are passed, no changes will be made.
         '''
-        if blacklist_versions and whitelist_versions:
+        if blacklist_versions is not None and whitelist_versions is not None:
             raise ValueError("Cannot pass both `whitelist_versions` and `blacklist_versions`!")
         elif blacklist_versions is None and whitelist_versions is None:
             return

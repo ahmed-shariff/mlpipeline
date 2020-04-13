@@ -137,6 +137,10 @@ def process_pipeline_single(config, whitelist_versions, blacklist_versions, b, *
     except AttributeError:
         executed_versions = None
     exitcode = 0
+    if whitelist_versions is not None and len(whitelist_versions) == 0:
+        whitelist_versions = None
+    if blacklist_versions is not None and len(blacklist_versions) == 0:
+        blacklist_versions = None
     while exitcode != 3 and exitcode != 1:
         if executed_versions is not None:
             try:
