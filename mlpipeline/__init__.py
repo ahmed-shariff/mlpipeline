@@ -1,4 +1,4 @@
-__version__ = "2.0.a.6"
+__version__ = "2.0.a.7"
 
 from mlpipeline.utils._utils import (Versions,
                                      log,

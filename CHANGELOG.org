@@ -1,4 +1,7 @@
 * Change-log
+** 2.0.a.7 [2020-12-13 Sun]
+   - Minor fix with filtering version in single cli
+   - Delayed initialization of datasets
 ** 2.0.a.6 [2020-04-12 Sun]
    - Moved the to mulitiprocessing from subprocess
    - Single mode now can test all versions of a single experiment
