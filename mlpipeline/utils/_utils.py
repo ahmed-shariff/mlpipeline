@@ -629,59 +629,79 @@ class Datasets():
             test_data_load_function is not None or \
             validation_data_load_function is not None, \
             'all data load functions canot be None'
-        if train_data_asset is not None:
-            log("Not setting train_dataset")
-            self._train_dataset = self._load_data(train_data_asset,
-                                                  train_data_load_function)
+
+        self._params = EasyDict({"train_data_asset": train_data_asset,
+                                 "test_data_asset": test_data_asset,
+                                 "validation_data_asset": validation_data_asset,
+                                 "class_encoding": class_encoding,
+                                 "train_data_load_function": train_data_load_function,
+                                 "test_data_load_function": test_data_load_function,
+                                 "validation_data_load_function": validation_data_load_function,
+                                 "test_size": test_size,
+                                 "validation_size": validation_size})
+        self._processed_datasets = False
+        
+
+    def _process_datasets(self):
+        if self._processed_datasets:
+            return
+
+        log("Processing datasets", agent="Datasets")
+        if self._params.train_data_asset is not None:
+            log("Not setting train_dataset", agent="Datasets")
+            self._train_dataset = self._load_data(self._params.train_data_asset,
+                                                  self._params.train_data_load_function)
         else:
             self._train_dataset = []
 
-        if test_data_asset is None:
-            if test_data_load_function is not None:
-                self._test_dataset = self._load_data(train_data_asset,
-                                                     test_data_load_function)
-            elif train_data_asset is not None:
-                if test_size is None:
+        if self._params.test_data_asset is None:
+            if self._params.test_data_load_function is not None:
+                self._test_dataset = self._load_data(self._params.train_data_asset,
+                                                     self._params.test_data_load_function)
+            elif self._params.train_data_asset is not None:
+                if self._params.test_size is None:
                     log("Using default 'test_size': 0.1", agent="Datasets")
                     test_size = 0.1
-                assert 0 <= test_size <= 1
-                train_size = round(len(self._train_dataset) * test_size)
+                assert 0 <= self._params.test_size <= 1
+                train_size = round(len(self._train_dataset) * self._params.test_size)
                 self._test_dataset = self._train_dataset[:train_size]
                 self._train_dataset = self._train_dataset[train_size:]
             else:
                 self._test_dataset = []
         else:
-            if test_size is not None:
+            if self._params.test_size is not None:
                 log("Ignoring 'test_size'", agent="Datasets")
-            test_data_load_function = test_data_load_function or train_data_load_function
-            self._test_dataset = self._load_data(test_data_asset,
-                                                 test_data_load_function)
+            test_data_load_function = self._params.test_data_load_function or self._params.train_data_load_function
+            self._test_dataset = self._load_data(self._params.test_data_asset,
+                                                 self._params.test_data_load_function)
 
-        if validation_data_asset is None:
-            if train_data_asset is not None:
-                if validation_size is None:
+        if self._params.validation_data_asset is None:
+            if self._params.train_data_asset is not None:
+                if self._params.validation_size is None:
                     log("Using default 'validation_size': 0.1", agent="Datasets")
-                    validation_size = 0.1
-                assert 0 <= validation_size <= 1
-                train_size = round(len(self._train_dataset) * validation_size)
+                    self._params.validation_size = 0.1
+                assert 0 <= self._params.validation_size <= 1
+                train_size = round(len(self._train_dataset) * self._params.validation_size)
                 self._validation_dataset = self._train_dataset[:train_size]
                 self._train_dataset = self._train_dataset[train_size:]
             else:
                 self._validation_dataset = []
         else:
-            if validation_size is not None:
+            if self._params.validation_size is not None:
                 log("Ignoring 'validation_size'", agent="Datasets")
-            validation_data_load_function = validation_data_load_function or \
-                test_data_load_function or train_data_load_function
-            self._validation_dataset = self._load_data(validation_data_asset,
-                                                       validation_data_load_function)
+            validation_data_load_function = self._params.validation_data_load_function or \
+                self._params.test_data_load_function or self._params.train_data_load_function
+            self._validation_dataset = self._load_data(self._params.validation_data_asset,
+                                                       self._params.validation_data_load_function)
 
-        if class_encoding is not None:
-            assert isinstance(class_encoding, dict)
-        self.class_encoding = class_encoding
+        if self._params.class_encoding is not None:
+            assert isinstance(self._params.class_encoding, dict)
+        self.class_encoding = self._params.class_encoding
         log("Train dataset size: {}".format(len(self._train_dataset)), agent="Datasets")
         log("Test dataset size: {}".format(len(self._test_dataset)), agent="Datasets")
         log("Validation dataset size: {}".format(len(self._validation_dataset)), agent="Datasets")
+
+        self._processed_datasets = True
 
     def _load_data(self,
                    data_file_path,
@@ -703,26 +723,32 @@ class Datasets():
     @property
     def train_dataset(self):
         """The pandas dataframe representing the training dataset"""
+        self._process_datasets()
         return self._train_dataset
 
     @train_dataset.setter
     def train_dataset(self, value):
+        self._process_datasets()
         self._train_dataset = value
 
     @property
     def test_dataset(self):
         """The pandas dataframe representing the training dataset"""
+        self._process_datasets()
         return self._test_dataset
 
     @test_dataset.setter
     def test_dataset(self, value):
+        self._process_datasets()
         self._test_dataset = value
 
     @property
     def validation_dataset(self):
         """The pandas dataframe representing the validation dataset"""
+        self._process_datasets()
         return self._validation_dataset
 
     @validation_dataset.setter
     def validation_dataset(self, value):
+        self._process_datasets()
         self._validation_dataset = value
