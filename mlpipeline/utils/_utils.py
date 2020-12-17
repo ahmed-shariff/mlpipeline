@@ -709,9 +709,9 @@ class Datasets():
         """Helper function to load the data using the provided `data_load_function`"""
         data, used_labels = data_load_function(data_file_path)
         try:
-            self.used_labels.update(used_labels)
+            self._used_labels.update(used_labels)
         except AttributeError:
-            self.used_labels = set(used_labels)
+            self._used_labels = set(used_labels)
 
         # Cheap way of checking if slicing is supported
         try:
@@ -752,3 +752,9 @@ class Datasets():
     def validation_dataset(self, value):
         self._process_datasets()
         self._validation_dataset = value
+
+    @property
+    def used_labels(self):
+        """The labels used by the dataset"""
+        self._process_datasets()
+        return self._used_labels
