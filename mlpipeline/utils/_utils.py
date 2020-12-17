@@ -501,6 +501,12 @@ class MetricContainer(EasyDict):
         for metric in self._get_matrics_subset(metrics):
             metric.reset_epoch()
 
+    def update(self, metrics, count=1):
+        """Update mulitple matrics. The `metrics` param should be a dictionary withthe keys being the names of the 
+        metrics, and the values the corresponding values to update."""
+        for k, v in metrics.items():
+            self[k].update(v, count)
+
 
 # Implimented as a class with properties for clarity and safty of sanity
 class PipelineConfig():
