@@ -4,6 +4,7 @@ import shutil
 import socket
 import logging
 import traceback
+import re
 import mlflow
 from multiprocessing import Process
 from datetime import datetime
@@ -72,6 +73,14 @@ class _AddToAndReturnResultString():
                 self.result_string += message + "\n"
         return self.result_string
 
+
+# This helps with the mlflow logging, where an object would be written with the hex code otherwise
+def _get_non_default_str(obj):
+    _str = str(obj)
+    if re.match(r'^<.* at 0x[0-9a-fA-F]*>$', _str) is not None:
+        _str = re.sub(r' at 0x[0-9a-fA-F]*>$', ">", _str)
+    return _str
+    
 
 def _experiment_main_loop(current_experiment, version_name_s, clean_experiment_dir, config):
     '''
@@ -165,16 +174,16 @@ def _experiment_main_loop(current_experiment, version_name_s, clean_experiment_d
         # Logging the versions params
         for k, v in version_spec.items():
             if k != version_parameters.DATALOADER:
-                mlflow.log_param(k, str(v))
+                mlflow.log_param(k, _get_non_default_str(v))
 
         _dataloader_wrapper = version_spec[version_parameters.DATALOADER]
         if isinstance(_dataloader_wrapper, DataLoaderCallableWrapper):
             mlflow.log_param(version_parameters.DATALOADER, _dataloader_wrapper.dataloader_class)
             mlflow.log_param("dataloader_args", _dataloader_wrapper.args)
             for k, v in _dataloader_wrapper.kwargs.items():
-                mlflow.log_param("dataloader_" + k, str(v))
+                mlflow.log_param("dataloader_" + k, _get_non_default_str(v))
         else:
-            mlflow.log_param(version_parameters.DATALOADER, _dataloader_wrapper)
+            mlflow.log_param(version_parameters.DATALOADER, _get_non_default_str(_dataloader_wrapper))
 
         # eval_complete=False
         # LOGGER.setLevel(logging.INFO)
