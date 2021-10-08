@@ -459,6 +459,7 @@ class MetricContainer(EasyDict):
                     items_per_row=3,
                     charachters_per_row=50,
                     name_prefix="",
+                    float_str_representation="{:.4f}",
                     step=None):
         return_string = ""
         printable_string = ""
@@ -471,7 +472,7 @@ class MetricContainer(EasyDict):
             else:
                 value = metric.avg()
 
-            s = "{}: {:.4f}    ".format(name, value)
+            s = ("{}: " + float_str_representation + "    ").format(name, value)
             # EXPERIMENT_MODE is set in the pipeline subprocess script
             if log_to_file and not is_no_log():
                 mlflow.log_metric(name, value, step=step)
