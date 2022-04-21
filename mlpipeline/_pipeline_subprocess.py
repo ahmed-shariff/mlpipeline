@@ -358,7 +358,7 @@ def _get_experiment_dir(experiment_name, version_spec, mode, config):
     from six.moves import urllib
     scheme = urllib.parse.urlparse(tracking_uri).scheme
     if len(scheme) == 1 or len(scheme) == 0:
-        tracking_uri = "file://" + str(Path(tracking_uri).absolute())
+        tracking_uri = "file://" + Path(tracking_uri).absolute().as_posix()
     if os.name == "nt":
         tracking_uri = tracking_uri.replace("\\", "/")
     return experiment_dir, tracking_uri
