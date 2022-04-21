@@ -70,7 +70,7 @@ def cli(ctx, no_log, experiments, experiments_dir, mlflow_tracking_uri):  # , ex
     ctx.obj = config
 
 
-@cli.resultcallback()
+@cli.result_callback()
 @click.pass_context
 def process_pipeline(ctx, config, no_log, experiments, experiments_dir, mlflow_tracking_uri):  # , experiments_output_dir):
     if ctx.invoked_subcommand == 'single':
